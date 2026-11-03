@@ -1,0 +1,457 @@
+:root {
+    --primary:    339 53% 95%;
+    --primary_2:  339 53% 73%;
+    --secondary:  38  75% 98%;
+    --tertiary:   109 23% 76%;
+    --quaternary: 116 15% 57%;
+
+    --black:      0 0% 0%;
+    --white:      0 0% 100%;
+    --red:        0 100% 62%;
+    --green:      120 100% 44%;
+    --warning:    48 100% 65%;
+    --warning_2:  48 100% 49%;
+    --gray:       210 15% 90%;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    background-color: hsl(var(--secondary));
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: hidden;
+    padding-top: 25px;
+    gap: 10px;
+}
+
+.glass-effect {
+    background: hsl(var(--glass_effect_color) / 0.16);
+    backdrop-filter:
+        blur(3.7px)
+        saturate(160%);
+    -webkit-backdrop-filter:
+        blur(3.7px)
+        saturate(160%);
+    border: 1px solid hsl(var(--glass_effect_color) / 0.32);
+    box-shadow:
+        inset 0 1px 1px hsl(var(--glass_effect_color) / 0.65),
+        inset 0 -1px 1px hsl(var(--glass_effect_color) / 0.08),
+        inset 0 0 18px hsl(var(--glass_effect_color) / 0.12),
+        0 4px 18px hsl(var(--glass_effect_color) / 0.08);
+    transition: 
+        width 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+        height 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+        border-radius 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+        background 0.5s ease;
+}
+
+.glass-effect::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(
+            180deg,
+            hsl(var(--glass_effect_color) / 0.28) 0%,
+            hsl(var(--glass_effect_color) / 0.08) 35%,
+            hsl(var(--glass_effect_color) / 0.02) 100%
+        );
+    pointer-events: none;
+}
+
+.title-container {
+    --glass_effect_color: var(--tertiary);
+    position: relative;
+    width: 225px;
+    height: 50px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+@keyframes header_text_shine {
+    0% {
+        background-position: 100% 0; 
+    }
+
+    70% {
+        background-position: 0% 0;
+    }
+
+    100% {
+        background-position: 0% 0;
+    }
+}
+
+.title-container span {
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(
+        110deg,
+        hsl(var(--tertiary)) 0%,
+        hsl(var(--tertiary)) 35%,
+        hsl(var(--quaternary)) 50%,
+        hsl(var(--tertiary)) 65%,
+        hsl(var(--tertiary)) 100%
+    );
+    background-size: 300% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: header_text_shine 2.5s linear infinite;
+    text-shadow:
+        0 1px 2px hsl(var(--tertiary) / 0.6),
+        0 2px 4px hsl(var(--tertiary) / 0.4);
+}
+
+.description-container {
+    position: relative;
+    margin-top: 12px;
+    width: 80%;
+    padding: 10px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: hsl(var(--primary) / 0.5);
+    border: 1px solid hsl(var(--primary));
+}
+
+.description-container span {
+    font-size: 0.8rem;
+    font-family: "Inter", sans-serif;
+    text-align: justify;
+    color: hsl(var(--primary_2));
+}
+
+.chats {
+    position: relative;
+    margin-top: 70px;
+    width: 90%;
+    height: 525px;
+    border-radius: 25px;
+    --glass_effect_color: var(--primary_2);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    overflow: hidden;
+}
+
+.chats .head {
+    margin-top: 2.5%;
+    width: 90%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chats .head .title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+    color: hsl(var(--primary_2));
+}
+
+.chats .head .actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.chats .head .actions button {
+    border: none;
+    background: hsl(var(--quaternary) / 0.3);
+    padding: 5px 15px;
+    border-radius: 15px;
+    font-size: 1.0rem;
+    font-weight: 600;
+    font-family: "Inter", sans-serif;
+    cursor: pointer;
+    color: hsl(var(--quaternary));
+    transition: all 0.2s ease;
+}
+
+.chats .head .actions button:hover {
+    background: hsl(var(--quaternary));
+    color: hsl(var(--white));
+}
+
+.chats .separator {
+    position: relative;
+    margin-top: 15px;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        transparent 0%,
+        hsl(var(--primary_2) / 0.5) 50%,
+        transparent 100%
+    );
+}
+
+.chats .area {
+    position: relative;
+    width: 100%;
+    height: 450px;
+    padding: 10px 15px 5px;
+    gap: 25px;
+    overflow: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.chats .area .no-chat {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-shadow: 0 0px 5px hsl(var(--quaternary) / 0.5);
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: "Inter", sans-serif;
+    color: hsl(var(--primary_2));
+}
+
+.chats .area .chat {
+    position: relative;
+    width: 240px;
+    height: 200px;
+    border-radius: 15px;
+    gap: 5px;
+    padding-top: 13px;
+    background: hsl(var(--white) / 0.76);
+    border: 2px solid hsl(var(--gray) / 0.25);
+    box-shadow: 0 0 8px hsl(var(--black) / 0.12);
+    transition: 0.17s transform ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.chats .area .chat:hover,
+.chats .area .chat:active {
+    transform: scale(1.03)
+}
+
+.chats .area .chat .more-details-line {
+    position: absolute;
+    width: 15px;
+    height: 20px;
+    background: hsl(var(--primary_2));
+    top: -2px;
+    right: 20px;
+    transition: 0.2s height ease;
+    cursor: pointer;
+}
+
+.chats .area .chat .more-details-line:hover {
+    height: 30px;
+}
+
+.chats .area .chat .more-details-line::before,
+.chats .area .chat .more-details-line::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    width: 0;
+    height: 0;
+    border-top: 15px solid hsl(var(--primary_2));
+}
+
+.chats .area .chat .more-details-line::before {
+    left: 0;
+    border-left: 15px solid transparent;
+}
+
+.chats .area .chat .more-details-line::after {
+    right: 0;
+    border-right: 15px solid transparent;
+}
+
+.chats .area .chat .short-container {
+    padding: 6.5px 8px;
+    background: hsl(var(--primary_2) / 0.20);
+    border-radius: 50px;
+    box-shadow: 0 0 5px hsl(var(--black) / 0.1);
+}
+
+.chats .area .chat .short-container span {
+    font-size: 1.15rem;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+    color: hsl(var(--primary_2));
+}
+
+.chats .area .chat .name {
+    margin-top: 5px;
+    width: 90%;
+    text-align: left;
+}
+
+.chats .area .chat .name span {
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+    color: hsl(var(--primary_2));
+}
+    
+.chats .area .chat .sep-line {
+    width: 90%;
+    height: 2px;
+    background: hsl(var(--gray) / 0.85);
+    border-radius: 5px;
+}
+
+.chats .area .chat .row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 90%;
+    padding: 5px 0;
+}
+
+.chats .area .chat .row .status {
+    --status-color: var(--green);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border-radius: 50px;
+    background: hsl(var(--status-color) / 0.12);
+    box-shadow: 0 0 10px hsl(var(--status-color) / 0.18);
+}
+
+.chats .area .chat .row .status.inactive {
+    --status-color: var(--red);
+}
+
+
+@keyframes pulse {
+    25%, 75% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.01);
+    }
+
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.2;
+    }
+
+    20% {
+        opacity: 0.35;
+    }
+
+    40% {
+        opacity: 0.7;
+    }
+
+    60% {
+        opacity: 1;
+    }
+
+    80% {
+        opacity: 0.5;
+    }
+}
+
+.chats .area .chat .row .status.active .dot {
+    animation: pulse 1.1s ease-out infinite;
+}
+
+.chats .area .chat .row .status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: hsl(var(--status-color));
+}
+
+.chats .area .chat .row .status .text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: "Poppins", sans-serif;
+    color: hsl(var(--status-color));
+}
+
+.chats .area .chat .row .expire-in {
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+    color: hsl(var(--black));
+}
+
+.chats .area .chat .share-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 90%;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background: hsl(var(--primary_2) / 0.5);
+    box-shadow: 0 0 10px hsl(var(--primary_2) / 0.18);
+}
+
+.chats .area .chat .share-link .link {
+    width: 75%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    font-weight: 500;
+    font-family: "Inter", sans-serif;
+    color: hsl(var(--black));
+    filter: blur(3.5px);
+    transition: 0.15s filter ease;
+}
+
+.chats .area .chat .share-link .link:hover {
+    filter: blur(0px);
+}
+
+.chats .area .chat .share-link .copy {
+    background: transparent;
+    border: 2px solid hsl(var(--white));
+    border-radius: 15px;
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    font-family: "Inter", sans-serif;
+    color: hsl(var(--white));
+    cursor: pointer;
+    transition: 0.2s color ease, 0.2s background ease;
+}
+
+.chats .area .chat .share-link .copy:hover {
+    background: hsl(var(--white));
+    color: hsl(var(--primary_2));
+}
