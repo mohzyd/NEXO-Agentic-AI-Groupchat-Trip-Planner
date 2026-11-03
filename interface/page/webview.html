@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView - Interface</title>
+
+    <link rel="stylesheet" href="../css/webview/fonts.css">
+    <link rel="stylesheet" href="../css/webview/main.css">
+    <link rel="stylesheet" href="../css/webview/chat-modal.css">
+    <link rel="stylesheet" href="../css/webview/cloudflared-modal.css">
+    <link rel="stylesheet" href="../css/webview/helpers.css">
+
+    <script src="../js/webview/chat-modal.js"        defer></script>
+    <script src="../js/webview/cloudflared-modal.js" defer></script>
+    <script src="../js/webview/script.js"            defer></script>
+</head>
+<body>
+    <div class="glass-effect title-container">
+        <span>NEXO</span>
+    </div>
+
+    <div class="description-container">
+        <span>Contact with your friends, manage your trips, holds money and check, and more in your chats.</span>
+    </div>
+
+    <div id="loadingModal" class="modal-overlay loading" open>
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p id="loadingMessage">Please wait...</p>
+        </div>
+    </div>
+
+    <div id="errorModal" class="modal-overlay">
+        <div class="error-container">
+            <div class="error-icon">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+
+            <h3>Something went wrong</h3>
+
+            <p id="errorMessage">
+                An unexpected error occurred.
+            </p>
+
+            <button id="closeErrorButton" class="error-close-button">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <div class="new-chat-modal" id="newChatModal" hidden>
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <div class="header-info">
+                    <span class="modal-eyebrow">NEW CONVERSATION</span>
+                    <h2>Create a chat</h2>
+                    <p>Set up a new space and invite your friends.</p>
+                </div>
+
+                <button type="button" class="close-modal" aria-label="Close">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="newChatForm">
+                <div class="form-group">
+                    <label for="chatName">Chat name</label>
+
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M4 5.5C4 4.67 4.67 4 5.5 4H18.5C19.33 4 20 4.67 20 5.5V15.5C20 16.33 19.33 17 18.5 17H9L4 21V5.5Z"
+                                stroke="currentColor"
+                                stroke-width="1.7"
+                                stroke-linejoin="round"/>
+                        </svg>
+
+                        <input
+                            type="text"
+                            id="chatName"
+                            name="chat_name"
+                            placeholder="e.g. Weekend plans"
+                            maxlength="40"
+                            required
+                        />
+                    </div>
+
+                    <span class="input-hint">Choose a name for your conversation.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="chatPrivacy">Privacy</label>
+
+                    <div class="select-wrapper">
+                        <select id="chatPrivacy" name="privacy">
+                            <option value="public">Public — Anyone with the link</option>
+                            <option value="private">Private — Password required</option>
+                        </select>
+
+                        <svg class="select-arrow" viewBox="0 0 24 24" fill="none">
+                            <path d="M7 10L12 15L17 10"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="form-group password-group" id="passwordGroup" hidden>
+                    <label for="chatPassword">Access password</label>
+
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <rect x="4" y="10" width="16" height="11" rx="2"
+                                stroke="currentColor" stroke-width="1.7"/>
+                            <path d="M8 10V7a4 4 0 0 1 8 0v3"
+                                stroke="currentColor" stroke-width="1.7"
+                                stroke-linecap="round"/>
+                        </svg>
+
+                        <input
+                            type="password"
+                            id="chatPassword"
+                            name="password"
+                            placeholder="Enter a secure password"
+                            minlength="6"
+                            autocomplete="new-password"
+                        />
+                    </div>
+
+                    <span class="input-hint">At least 6 characters.</span>
+                </div>
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label>Chat lifetime</label>
+                        <span class="optional-tag">OPTIONAL</span>
+                    </div>
+
+                    <div class="duration-options" id="durationOptions">
+
+                        <button type="button" class="duration-option"
+                                data-duration="30">
+                            <span class="duration-value">30</span>
+                            <span class="duration-unit">MIN</span>
+                        </button>
+
+                        <button type="button" class="duration-option"
+                                data-duration="60">
+                            <span class="duration-value">1</span>
+                            <span class="duration-unit">HOUR</span>
+                        </button>
+
+                        <button type="button" class="duration-option"
+                                data-duration="180">
+                            <span class="duration-value">3</span>
+                            <span class="duration-unit">HOURS</span>
+                        </button>
+
+                    </div>
+
+                    <span class="input-hint">
+                        Leave unselected to keep the chat alive until it is closed.
+                    </span>
+                </div>
+
+                <div class="warning-container" id="chatMessage" hidden
+                    role="status" aria-live="polite">
+
+                    <div class="message-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M12 8V13M12 16.5V16.51"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"/>
+                            <path d="M10.3 3.86L2.7 17.05A2 2 0 0 0 4.43 20H19.57A2 2 0 0 0 21.3 17.05L13.7 3.86A2 2 0 0 0 10.3 3.86Z"
+                                stroke="currentColor"
+                                stroke-width="1.7"
+                                stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+
+                    <div class="message-content">
+                        <span class="message-title">Notice</span>
+                        <p class="message-text"></p>
+                    </div>
+
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="create-button">
+                        <span class="button-text">Create chat</span>
+                        <span class="button-loader"></span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="cloudflared-modal" id="cloudflaredModal" hidden>
+
+        <div class="modal-content">
+
+            <!-- Header -->
+            <div class="modal-header">
+
+                <div class="header-info">
+                    <span class="modal-eyebrow">REQUIRED COMPONENT</span>
+                    <h2>Cloudflared setup</h2>
+                    <p>One last step before creating your chat.</p>
+                </div>
+
+                <button type="button" class="close-modal" aria-label="Close">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"/>
+                    </svg>
+                </button>
+
+            </div>
+
+
+            <!-- Warning -->
+            <div class="cloudflared-notice">
+
+                <div class="notice-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 8V13M12 16.5V16.51"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"/>
+                        <path d="M10.3 3.86L2.7 17.05A2 2 0 0 0 4.43 20H19.57A2 2 0 0 0 21.3 17.05L13.7 3.86A2 2 0 0 0 10.3 3.86Z"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linejoin="round"/>
+                    </svg>
+                </div>
+
+                <div class="notice-content">
+                    <span class="notice-title">Additional requirement</span>
+
+                    <p>
+                        Unfortunately, you're missing one requirement.
+                        You need the <strong>cloudflared service</strong>
+                        to access chat creation. You can download it
+                        automatically or manually.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <!-- Main content -->
+            <div class="cloudflared-body">
+
+                <!-- Installation choices -->
+                <div class="installation-options" id="installationOptions">
+
+                    <button type="button"
+                            class="installation-card"
+                            data-installation="automatic">
+
+                        <div class="installation-card-icon automatic-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M12 3V15M7 10L12 15L17 10"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"/>
+                                <path d="M5 17V19C5 20.1 5.9 21 7 21H17C18.1 21 19 20.1 19 19V17"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"/>
+                            </svg>
+                        </div>
+
+                        <div class="installation-card-content">
+                            <span class="installation-card-title">
+                                Automatic
+                            </span>
+
+                            <span class="installation-card-description">
+                                Download and install it for me.
+                            </span>
+                        </div>
+
+                        <svg class="installation-chevron"
+                            viewBox="0 0 24 24" fill="none">
+                            <path d="M9 18L15 12L9 6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"/>
+                        </svg>
+
+                    </button>
+
+
+                    <button type="button"
+                            class="installation-card"
+                            data-installation="manual">
+
+                        <div class="installation-card-icon manual-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M4 5H20V19H4V5Z"
+                                    stroke="currentColor"
+                                    stroke-width="1.7"
+                                    stroke-linejoin="round"/>
+                                <path d="M8 9L10 11L8 13M13 13H16"
+                                    stroke="currentColor"
+                                    stroke-width="1.7"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+
+                        <div class="installation-card-content">
+                            <span class="installation-card-title">
+                                Manual
+                            </span>
+
+                            <span class="installation-card-description">
+                                I'll download and configure it myself.
+                            </span>
+                        </div>
+
+                        <svg class="installation-chevron"
+                            viewBox="0 0 24 24" fill="none">
+                            <path d="M9 18L15 12L9 6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"/>
+                        </svg>
+
+                    </button>
+
+                </div>
+
+
+                <!-- Automatic installation -->
+                <div class="installation-view automatic-view" hidden>
+
+                    <div class="view-heading">
+                        <button type="button" class="back-button">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M15 18L9 12L15 6"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"/>
+                            </svg>
+                            Back
+                        </button>
+
+                        <span class="view-step">AUTOMATIC INSTALLATION</span>
+                    </div>
+
+                    <div class="progress-section" hidden>
+
+                        <div class="progress-heading">
+                            <div>
+                                <span class="progress-title" id="progressTitle">
+                                    Preparing download...
+                                </span>
+
+                                <span class="progress-subtitle" id="progressSubtitle">
+                                    Please wait while we set things up.
+                                </span>
+                            </div>
+
+                            <span class="progress-percentage"
+                                id="progressPercentage">0%</span>
+                        </div>
+
+                        <div class="progress-track">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+
+                        <div class="progress-footer">
+                            <span id="progressStatus">Waiting to start</span>
+                            <span id="progressSize"></span>
+                        </div>
+                    </div>
+
+                    <button class="download-button" id="installButton">
+                        Install
+                    </button>
+
+                    <div class="installation-result" id="installationResult" hidden>
+                        <div class="result-icon"></div>
+                        <div class="result-content">
+                            <span class="result-title"></span>
+                            <p class="result-text"></p>
+                        </div>
+                    </div>
+
+                    <div class="installation-actions">
+
+                        <button type="button" class="retry-button" hidden>
+                            Try again
+                        </button>
+
+                        <button type="button" class="done-button" hidden>
+                            Continue
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Manual installation -->
+                <div class="installation-view manual-view" hidden>
+
+                    <div class="view-heading">
+                        <button type="button" class="back-button">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M15 18L9 12L15 6"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"/>
+                            </svg>
+                            Back
+                        </button>
+
+                        <span class="view-step">MANUAL SETUP</span>
+                    </div>
+
+                    <div class="manual-steps">
+
+                        <!-- Step 1 -->
+                        <div class="manual-step">
+                            <span class="step-number">01</span>
+
+                            <div class="step-content">
+                                <h3>Download Cloudflared</h3>
+                                <p>Choose the version that matches your Windows architecture.</p>
+
+                                <div class="download-links">
+                                    <a href="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+                                       target="_blank" rel="noopener noreferrer">x64 ↗</a>
+
+                                    <a href="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-386.exe"
+                                       target="_blank" rel="noopener noreferrer">x86 ↗</a>
+
+                                    <a href="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-arm64.exe"
+                                       target="_blank" rel="noopener noreferrer">ARM64 ↗</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="manual-step">
+                            <span class="step-number">02</span>
+
+                            <div class="step-content">
+                                <h3>Move the executable</h3>
+                                <p>Place the downloaded file in this directory:</p>
+
+                                <div class="installation-path">
+                                    <code id="cloudflaredPath">%LOCALAPPDATA%\YourApp\Dependencies\Cloudflared\cloudflared.exe</code>
+
+                                    <button type="button" class="copy-path-button"
+                                            aria-label="Copy installation path"
+                                            title="Copy path">
+                                        <svg viewBox="0 0 24 24" fill="none">
+                                            <rect x="8" y="8" width="12" height="12" rx="2"
+                                                stroke="currentColor" stroke-width="1.7"/>
+                                            <path d="M16 8V5C16 3.9 15.1 3 14 3H5C3.9 3 3 3.9 3 5V14C3 15.1 3.9 16 5 16H8"
+                                                stroke="currentColor" stroke-width="1.7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="manual-step">
+                            <span class="step-number">03</span>
+
+                            <div class="step-content">
+                                <h3>Verify installation</h3>
+                                <p>Make sure Cloudflared is installed and ready to use.</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="manual-actions">
+                        <button type="button" class="verify-button">
+                            <span class="verify-text">Verify installation</span>
+                            <span class="verify-loader"></span>
+                        </button>
+                    </div>
+
+                    <div class="manual-result" role="status" aria-live="polite" hidden></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 11V16M12 8V8.01"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"/>
+                        <rect x="4" y="3" width="16" height="18"
+                            rx="4" stroke="currentColor"
+                            stroke-width="1.5"/>
+                    </svg>
+
+                    Required to create and share chats.
+                </span>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="glass-effect chats">
+        <div class="head">
+            <div class="title">
+                <span>Chats</span>
+            </div>
+            <div class="actions">
+                <button id="newChat">New Chat</button>
+            </div>
+        </div>
+        <div class="separator"></div>
+        <div class="area">
+            <!-- <div class="no-chat">No chats created yet</div> -->
+            <div class="chat">
+                <div class="more-details-line"></div>
+                <div class="short-container">
+                    <span>NA</span>
+                </div>
+                <div class="name">
+                    <span>Weekend Trip</span>
+                </div>
+                <div class="sep-line"></div>
+                <div class="row">
+                    <div class="status inactive">
+                        <div class="dot"></div>
+                        <div class="text">Inactive</div>
+                    </div>
+                    <div class="expire-in">
+                        07:23
+                    </div>
+                </div>
+                <div class="share-link">
+                    <span class="link">asdasdaasasdasdasdasdasdsdasdasdasdasdssdasdasds</span>
+                    <button class="copy">Copy</button>
+                </div>
+            </div>
+
+            <div class="chat">
+                <div class="more-details-line"></div>
+                <div class="short-container">
+                    <span>NA</span>
+                </div>
+                <div class="name">
+                    <span>Weekend Trip</span>
+                </div>
+                <div class="sep-line"></div>
+                <div class="row">
+                    <div class="status active">
+                        <div class="dot"></div>
+                        <div class="text">Active</div>
+                    </div>
+                    <div class="expire-in">
+                        07:23
+                    </div>
+                </div>
+                <div class="share-link">
+                    <span class="link">asdasdasdasdasdasdasdsasdasdasdasdasdsasdasdasds</span>
+                    <button class="copy">Copy</button>
+                </div>
+            </div>
+
+            <div class="chat">
+                <div class="more-details-line"></div>
+                <div class="short-container">
+                    <span>NA</span>
+                </div>
+                <div class="name">
+                    <span>Weekend Trip</span>
+                </div>
+                <div class="sep-line"></div>
+                <div class="row">
+                    <div class="status active">
+                        <div class="dot"></div>
+                        <div class="text">Active</div>
+                    </div>
+                    <div class="expire-in">
+                        07:23
+                    </div>
+                </div>
+                <div class="share-link">
+                    <span class="link">asdasdasdasdasdasdasdsasdasdasdasdasdsasdasdasds</span>
+                    <button class="copy">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
