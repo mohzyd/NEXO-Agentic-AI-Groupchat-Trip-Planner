@@ -253,9 +253,16 @@ body {
     justify-content: flex-start;
 }
 
-.chats .area .chat:hover,
-.chats .area .chat:active {
+.chats .area .chat:not(:has(.ghost)):hover,
+.chats .area .chat:not(:has(.ghost)):active {
     transform: scale(1.03)
+}
+
+.chats .area .chat.ghost {
+    pointer-events: none !important;
+    background: hsl(var(--black) / 0.08);
+    border: none;
+    box-shadow: 0 0 4px hsl(var(--quaternary) / 0.10);
 }
 
 .chats .area .chat .more-details-line {

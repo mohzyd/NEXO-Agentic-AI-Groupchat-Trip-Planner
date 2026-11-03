@@ -51,6 +51,12 @@
         0 4px 15px rgba(0, 0, 0, 0.05);
 
     animation: modalSlideIn 0.25s ease;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.new-chat-modal .modal-content::-webkit-scrollbar {
+    display: none;
 }
 
 @keyframes modalSlideIn {
@@ -121,7 +127,12 @@
     background: hsl(var(--gray) / 0.55);
 
     cursor: pointer;
-    transition: 0.2s ease;
+    transition: all 0.2s ease;
+}
+
+.new-chat-modal .close-modal:disabled {
+    pointer-events: none;
+    opacity: 0.5;
 }
 
 .new-chat-modal .close-modal svg {

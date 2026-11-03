@@ -1,11 +1,11 @@
 const CloudflaredModal = (() => {
-
     const modal = document.getElementById("cloudflaredModal");
 
     const options       = modal.querySelector("#installationOptions");
     const automaticView = modal.querySelector(".automatic-view");
     const manualView    = modal.querySelector(".manual-view");
 
+    const progressSection    = modal.querySelector("#progressSection");
     const progressFill       = modal.querySelector("#progressFill");
     const progressPercentage = modal.querySelector("#progressPercentage");
     const progressTitle      = modal.querySelector("#progressTitle");
@@ -27,8 +27,8 @@ const CloudflaredModal = (() => {
     const copyPathButton     = modal.querySelector(".copy-path-button");
 
     let isInstalling = false;
-    let currentView  = "options";
     let isInstalled  = false;
+    let blocked      = false;
 
     const icons = {
         success: `
@@ -68,29 +68,26 @@ const CloudflaredModal = (() => {
     }
 
     function showOptions() {
-        currentView = "options";
+        options.hidden             = false;
+        automaticView.hidden       = true;
+        manualView.hidden          = true;
 
-        options.hidden        = false;
-        automaticView.hidden  = true;
-        manualView.hidden     = true;
-        result.hidden         = true;
-        retryButton.hidden    = true;
-        doneButton.hidden     = true;
-        downloadButton.hidden = false;
+        if (!isInstalled && !isInstalling) {
+            result.hidden          = true;
+            retryButton.hidden     = true;
+            doneButton.hidden      = true;
+            downloadButton.hidden  = false;
+            progressSection.hidden = true;
+        }
     }
 
     function showAutomatic() {
-        currentView = "automatic";
-
         options.hidden        = true;
         automaticView.hidden  = false;
         manualView.hidden     = true;
-        downloadButton.hidden = false;
     }
 
     function showManual() {
-        currentView = "manual";
-
         options.hidden       = true;
         automaticView.hidden = true;
         manualView.hidden    = false;
@@ -102,18 +99,14 @@ const CloudflaredModal = (() => {
     }
 
     function resetProgress() {
-
         updateProgress(0);
 
-        progressTitle.textContent = "Preparing download...";
-        progressSubtitle.textContent =
-            "Please wait while we set things up.";
+        progressTitle.textContent    = "Preparing download...";
+        progressSubtitle.textContent = "Please wait while we set things up.";
+        progressStatus.textContent   = "Waiting to start";
+        progressSize.textContent     = "";
 
-        progressStatus.textContent = "Waiting to start";
-        progressSize.textContent = "";
-
-        result.hidden = true;
-
+        result.hidden      = true;
         retryButton.hidden = true;
         doneButton.hidden  = true;
     }
@@ -143,22 +136,17 @@ const CloudflaredModal = (() => {
     }
 
     function showResult(type, title, text) {
-
         const validTypes = ["success", "error"];
-
         if (!validTypes.includes(type)) return;
-        result.className = `installation-result ${type}`;
 
-        resultIcon.innerHTML = icons[type];
-
+        result.className        = `installation-result ${type}`;
+        resultIcon.innerHTML    = icons[type];
         resultTitle.textContent = title;
         resultText.textContent  = text;
-
-        result.hidden = false;
+        result.hidden           = false;
     }
 
     async function startInstallation() {
-
         if (isInstalling) return;
 
         showAutomatic();
@@ -172,17 +160,17 @@ const CloudflaredModal = (() => {
         doneButton.hidden     = true;
         result.hidden         = true;
 
-        progressTitle.textContent = "Starting installation...";
-        progressSubtitle.textContent =
-            "Initializing the Cloudflared setup.";
-
-        progressStatus.textContent = "Initializing";
+        progressTitle.textContent    = "Starting installation...";
+        progressSubtitle.textContent = "Initializing the Cloudflared setup.";
+        progressStatus.textContent   = "Initializing";
 
         let isDownloadingStarted = false;
-        let errorMessage = "";
+        let errorMessage         = "";
         
         try {
-            isDownloadingStarted = Boolean(await window.pywebview.api.start_cloudservice_download());
+            const [rStatus, rMessage] = await window.pywebview.api.start_cloudservice_download();
+            isDownloadingStarted      = rStatus;
+            errorMessage              = rMessage;
         } catch (error) {
             errorMessage = error?.message || error || "An unknown error occurred. Please try again.";
         }
@@ -190,19 +178,19 @@ const CloudflaredModal = (() => {
         if (!isDownloadingStarted) {
             failInstallation(errorMessage);
         }
+
+        progressSection.hidden = false;
     }
 
     function completeInstallation() {
-
         isInstalling = false;
-        isInstalled = true;
-
+        isInstalled  = true;
         setCloseDisabled(false);
 
         updateProgress(100, {
-            title: "Installation completed!",
+            title:    "Installation completed!",
             subtitle: "Cloudflared is ready to use.",
-            status: "Completed"
+            status:   "Completed"
         });
 
         showResult(
@@ -220,11 +208,9 @@ const CloudflaredModal = (() => {
         isInstalling = false;
         setCloseDisabled(false);
 
-        progressTitle.textContent = "Installation failed";
-        progressSubtitle.textContent =
-            "Something prevented Cloudflared from being installed.";
-
-        progressStatus.textContent = "Failed";
+        progressTitle.textContent    = "Installation failed";
+        progressSubtitle.textContent = "Something prevented Cloudflared from being installed.";
+        progressStatus.textContent   = "Failed";
 
         showResult(
             "error",
@@ -237,16 +223,17 @@ const CloudflaredModal = (() => {
     }
 
     function setVerifying(state) {
-
         verifyButton.disabled = state;
 
         verifyButton.classList.toggle("loading", state);
-
-        verifyButton.querySelector(".verify-text").textContent =
-            state ? "Checking..." : "Verify installation";
+        verifyButton.querySelector(".verify-text").textContent = state
+            ? "Checking..."
+            : "Verify installation";
     }
 
     async function verifyInstallation() {
+        if (blocked) return;
+        blocked = true;
         setVerifying(true);
 
         isInstalled      = false;
@@ -262,12 +249,24 @@ const CloudflaredModal = (() => {
 
         setVerifying(false);
 
-        manualResult.className = `manual-result ${isInstalled ? "success" : "error"}`;
+        manualResult.className   = `manual-result ${isInstalled ? "success" : "error"}`;
         manualResult.textContent = isInstalled
             ? "Cloudflared was detected successfully and is ready to use."
             : (errorMessage || "Cloudflared could not be detected. Check its location and try again.");
 
         manualResult.hidden = false;
+
+        if (isInstalled) setValue("hasRequirement", true);
+
+        setCloseDisabled(true);
+        setTimeout(() => {
+            blocked = false;
+            close();
+            try {
+                window.NewChatModal.open()
+            } catch (error) {}
+            setCloseDisabled(false);
+        }, 1000);
     }
 
     modal.querySelectorAll("[data-installation]").forEach(button => {
@@ -288,7 +287,7 @@ const CloudflaredModal = (() => {
 
     modal.querySelectorAll(".back-button").forEach(button => {
         button.addEventListener("click", () => {
-            if (!isInstalling) showOptions();
+            if (!isInstalling && !blocked) showOptions();
         });
     });
 
@@ -383,6 +382,29 @@ const CloudflaredModal = (() => {
 
 window.CloudflaredModal = CloudflaredModal;
 
-window.downloadCloudflaredUpdate = function(isDownloading, downloaded, total, error) {
-    console.log(isDownloading, downloaded, total, error);
-};
+window.API.on("downloadCloudflaredUpdate", (data) => {
+    const { isDownloading, downloaded, total, message } = data;
+    const totalRel = total || 0;
+    console.log("downloadCloudflaredUpdate", data);
+    
+    if (!isDownloading) {
+        window.CloudflaredModal.failInstallation(message || "Failed to download Cloudflared");
+        return;
+    }
+
+    let percentage;
+    if (typeof total !== "number" || total <= 0) {
+        console.error("Invalid download progress data");
+        percentage = 99;
+    } else {
+        percentage = Math.round((downloaded / totalRel) * 100);
+    }
+    
+    if (downloaded == totalRel) {
+        window.CloudflaredModal.completeInstallation();
+        setValue("hasRequirement", true);
+        return;
+    }
+
+    window.CloudflaredModal.updateProgress(percentage);
+});

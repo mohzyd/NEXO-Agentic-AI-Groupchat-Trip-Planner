@@ -132,6 +132,7 @@
 
 .cloudflared-modal .close-modal:disabled {
     pointer-events: none;
+    opacity: 0.5;
 }
 
 .cloudflared-modal .close-modal:hover {

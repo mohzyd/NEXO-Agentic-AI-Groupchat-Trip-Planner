@@ -1,7 +1,8 @@
 import win32pipe
 
-APP_NAME                = "Chat App"
-APP_DATA_FOLDER_NAME    = "chatapp"
+APP_NAME                = "NEXO App"
+APP_DATA_FOLDER_NAME    = "nexoapp"
+APP_DEBUG               = True
 
 CLOUDFLARE_SERVICE_NAME = "cloudflare_tunnel"
 CLOUDFLARE_SERVICE_URLS = {
@@ -27,8 +28,8 @@ APP_PIPE_OUT_BUFFER_SIZE:      int        = APP_PIPE_BUFFER_SIZE
 APP_PIPE_ERROR_SEM_TIMEOUT:    int        = 121
 APP_PIPE_ERROR_PIPE_CONNECTED: int        = 535
 APP_PIPE_ERROR_MORE_DATA:      int        = 234
-APP_PIPE_IDLE_CHECK_INTERVAL:  int        = 1 #5
-APP_PIPE_IDLE_MAX_RETRIES:     int        = 1 # 5
+APP_PIPE_IDLE_CHECK_INTERVAL:  int        = 1 #5, should return to 5 in production
+APP_PIPE_IDLE_MAX_RETRIES:     int        = 1 #5, should return to 5 in production
 APP_PIPE_POLL_INTERVAL:        float      = 0.01
 APP_PIPE_SERVER_JOB:           str        = "SERVER"
 APP_PIPE_ALL_JOBS:             str        = "*"

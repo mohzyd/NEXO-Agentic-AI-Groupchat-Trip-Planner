@@ -1,11 +1,12 @@
 const NewChatModal = (() => {
 
-    const modal = document.getElementById("newChatModal");
-    const form = document.getElementById("newChatForm");
+    const modal         = document.getElementById("newChatModal");
+    const form          = document.getElementById("newChatForm");
 
-    const privacy = document.getElementById("chatPrivacy");
+    const chatName      = document.getElementById("chatName");
+    const privacy       = document.getElementById("chatPrivacy");
     const passwordGroup = document.getElementById("passwordGroup");
-    const password = document.getElementById("chatPassword");
+    const password      = document.getElementById("chatPassword");
 
     const durationOptions = document.querySelectorAll(
         "#durationOptions .duration-option"
@@ -18,7 +19,7 @@ const NewChatModal = (() => {
     const createButton = form.querySelector(".create-button");
 
     let selectedDuration = null;
-    let isLoading = false;
+    let isLoading        = false;
 
     const icons = {
         warning: `
@@ -60,62 +61,44 @@ const NewChatModal = (() => {
         `
     };
 
-
-    /* ==============================
-       OPEN / CLOSE
-    ============================== */
-
     function open() {
         modal.hidden = false;
-        document.body.style.overflow = "hidden";
 
         setTimeout(() => {
-            document.getElementById("chatName").focus();
+            chatName.focus();
         }, 100);
     }
 
     function close() {
         if (isLoading) return;
 
-        modal.hidden = true;
-        document.body.style.overflow = "";
+        modal.hidden   = true;
+        chatName.value = "";
+        privacy.value  = "public";
+        password.value = "";
+        hideMessage();
     }
 
-
-    /* ==============================
-       PRIVACY
-    ============================== */
-
     privacy.addEventListener("change", () => {
-
-        const requiresPassword = privacy.value === "private";
+        const requiresPassword = (privacy.value === "private");
 
         passwordGroup.hidden = !requiresPassword;
-        password.required = requiresPassword;
+        password.required    = requiresPassword;
 
         if (!requiresPassword) {
             password.value = "";
         }
-
     });
 
-
-    /* ==============================
-       DURATION
-    ============================== */
-
     durationOptions.forEach(option => {
-
         option.addEventListener("click", () => {
-
             const duration = Number(option.dataset.duration);
 
-            // Clicking the selected option deselects it.
+            // Clicking the selected option to deselect it.
             if (selectedDuration === duration) {
                 selectedDuration = null;
                 option.classList.remove("active");
             } else {
-
                 durationOptions.forEach(item => {
                     item.classList.remove("active");
                 });
@@ -123,91 +106,66 @@ const NewChatModal = (() => {
                 selectedDuration = duration;
                 option.classList.add("active");
             }
-
         });
-
     });
 
-
-    /* ==============================
-       MESSAGES
-    ============================== */
-
+    // Appears a helpful message to the user.
     function showMessage(type, text, title = null) {
-
         const validTypes = ["warning", "error", "success", "info"];
-
+        
         if (!validTypes.includes(type)) {
             type = "info";
         }
 
         const defaultTitles = {
             warning: "Warning",
-            error: "Something went wrong",
+            error:   "Something went wrong",
             success: "Success",
-            info: "Information"
+            info:    "Information"
         };
 
-        message.className = `warning-container ${type}`;
-
+        message.className        = `warning-container ${type}`;
         messageTitle.textContent = title || defaultTitles[type];
-        messageText.textContent = text;
-
-        messageIcon.innerHTML = icons[type];
-
-        message.hidden = false;
+        messageText.textContent  = text;
+        messageIcon.innerHTML    = icons[type];
+        message.hidden           = false;
     }
 
     function hideMessage() {
         message.hidden = true;
     }
 
-
-    /* ==============================
-       LOADING
-    ============================== */
-
     function setLoading(state) {
-
         isLoading = state;
 
         createButton.classList.toggle("loading", state);
         createButton.disabled = state;
-
-        createButton.querySelector(".button-text").textContent =
-            state ? "Creating..." : "Create chat";
+        createButton.querySelector(".button-text").textContent = state
+            ? "Creating..."
+            : "Create chat";
 
         modal.querySelector(".close-modal").disabled = state;
     }
 
-
-    /* ==============================
-       FORM SUBMISSION
-    ============================== */
-
-    form.addEventListener("submit", event => {
-
+    createButton.addEventListener("click", async event => {
         event.preventDefault();
 
         if (isLoading) return;
-
+        setLoading(true);
         hideMessage();
 
         const data = {
-            chat_name: document.getElementById("chatName").value.trim(),
-
-            privacy: privacy.value,
-
-            password: privacy.value === "private"
-                ? password.value
-                : null,
-
-            // null = unlimited lifetime
-            lifetime: selectedDuration
+            chat_name: chatName.value.trim(),
+            privacy:   privacy.value,
+            password:  privacy.value === "private"
+                        ? password.value
+                        : null,
+            lifetime:  selectedDuration
         };
 
         if (!data.chat_name) {
             showMessage("warning", "Please enter a chat name.");
+            setLoading(false);
             return;
         }
 
@@ -216,51 +174,47 @@ const NewChatModal = (() => {
                 "warning",
                 "Your password must contain at least 6 characters."
             );
+            setLoading(false);
             return;
         }
 
-        setLoading(true);
+        let isCreated    = false;
+        let errorMessage = "";
 
-        // Send data to your application.
-        form.dispatchEvent(new CustomEvent("chat:create", {
-            bubbles: true,
-            detail: data
-        }));
+        try {
+            const [status, message] = await window.pywebview.api.create_new_chat();
+            isCreated = status; errorMessage = message;
+        } catch (error) {
+            errorMessage = error.message || error || "An unknown error occurred.";
+        }
 
+        if (!isCreated) {
+            showMessage("error", errorMessage);
+            setLoading(false);
+            return;
+        }
+
+        showMessage("success", "Chat created successfully!");
+        askForRefreshChats();
+        setTimeout(() => {
+            setLoading(false);
+            close();
+        }, 600);
     });
-
-
-    /* ==============================
-       EVENT LISTENERS
-    ============================== */
 
     modal.querySelector(".close-modal").addEventListener("click", close);
-
-    modal.addEventListener("click", event => {
-        if (event.target === modal) close();
-    });
-
+    modal.addEventListener("click", event => event.target === modal ? close() : null);
     document.addEventListener("keydown", event => {
         if (event.key === "Escape" && !modal.hidden) {
             close();
         }
     });
 
-
-    /* ==============================
-       PUBLIC API
-    ============================== */
-
     return {
         open,
-        close,
-        showMessage,
-        hideMessage,
-        setLoading
+        close
     };
-
 })();
 
 
-// Make it accessible from your application.
 window.NewChatModal = NewChatModal;

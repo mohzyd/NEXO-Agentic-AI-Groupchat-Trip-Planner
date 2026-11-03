@@ -17,7 +17,7 @@ class WebViewCreationOptions:
         max_width:   int  = 800,           max_height: int    = 600
     ) -> None:
         self.title      = title
-        self.api        = api
+        self.api        = api               # API object to expose to the webview
         self.width      = width
         self.height     = height
         self.x          = x
@@ -26,13 +26,13 @@ class WebViewCreationOptions:
         self.fullscreen = fullscreen
         self.min_width  = min_width
         self.min_height = min_height
-        self.hidden     = hidden
+        self.hidden     = hidden            # Hide the window on creation
         self.frameless  = frameless
         self.use_shadow = use_shadow
-        self.on_top     = on_top
-        self.on_center  = on_center
-        self.minimized  = minimized
-        self.maximized  = maximized
+        self.on_top     = on_top            # Keep the window on top of other windows or processes (like taskbar)
+        self.on_center  = on_center         # Center the window on the screen
+        self.minimized  = minimized         # Minimize the window on creation
+        self.maximized  = maximized         # Maximize the window on creation
 
 
 class WebViewHandler:
@@ -44,9 +44,22 @@ class WebViewHandler:
         *,
         html_path: Path
     ) -> None:
+        """
+        Creates a webview window with the given options and html path.
+        html path should be written as a keyword argument as html_path=Your Path as String or Path object.
+        * NOTE: each webview window can only be created once per process because it requires a main thread.
+
+        raises:
+            TypeError:         If options is not an instance of WebViewCreationOptions or html_path is not an instance of Path.
+            RuntimeError:      If a window is already created.
+            FileNotFoundError: If html_path does not exist or is not a file.
+        """
 
         if (not isinstance(options, WebViewCreationOptions)):
             raise TypeError("options must be an instance of WebViewCreationOptions")
+
+        if (isinstance(html_path, str)):
+            html_path = Path(html_path)
 
         if (not isinstance(html_path, Path)):
             raise TypeError("html_path must be an instance of Path")
@@ -82,10 +95,24 @@ class WebViewHandler:
 
     @staticmethod
     def get_current_window() -> webview.Window | None:
+        """
+        Returns the current window.
+        """
+
         return WebViewHandler.__current_window
 
     @classmethod
     def set_title(cls, title: str) -> bool:
+        """
+        Sets the title of the current window.
+        
+        Args:
+            title: The title to set.
+            
+        Returns:
+            True if the title was set, False otherwise.
+        """
+
         if (not isinstance(cls.__current_window, webview.Window)):
             return False
 
@@ -97,6 +124,13 @@ class WebViewHandler:
 
     @classmethod
     def hide(cls) -> bool:
+        """
+        Hides the current window.
+        
+        Returns:
+            True if the window was hidden, False otherwise.
+        """
+
         if (not isinstance(cls.__current_window, webview.Window)):
             return False
         
@@ -105,6 +139,13 @@ class WebViewHandler:
 
     @classmethod
     def show(cls) -> bool:
+        """
+        Shows the current window.
+        
+        Returns:
+            True if the window was shown, False otherwise.
+        """
+
         if (not isinstance(cls.__current_window, webview.Window)):
             return False
         
@@ -119,6 +160,19 @@ class WebViewHandler:
         width:  int | None = None,
         height: int | None = None
     ) -> bool:
+        """
+        Sets the bounds of the current window.
+        
+        Args:
+            x:      The x coordinate of the window.
+            y:      The y coordinate of the window.
+            width:  The width of the window.
+            height: The height of the window.
+            
+        Returns:
+            True if the bounds were set, False otherwise.
+        """
+        
         if (not isinstance(cls.__current_window, webview.Window)):
             return False
         
