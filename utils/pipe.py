@@ -1,4 +1,58 @@
-from typing      import Callable, Any
+"""
+===============[ Pipes system ]===============
+Sometimes when you trying to build a new project, at the end, you realize that you need to separate your action in different processes.
+For example, you want to build an interface, and you want to handle some actions but the problem when the user closed the interface,
+suddenly the process will be terminated and all the actions will be stopped. In this case the system appears. Now you can separate
+your actions into different processes and communicate between them using pipes that even if the user closed the interface, your
+actions will still be executed until you decide when it stops.
+
+-- Main methods:
+
+ 1: Creating a pipe:
+   A pipe can be created in three ways:
+   from utils.pipe import Pipes, ConnectionFlags
+
+   Pipes(flags=ConnectionFlags.SERVER) - Creates a server pipe that will be precent until the user's device shutdown
+   Pipes(flags=ConnectionFlags.SERVER | ConnectionFlags.SERVER_EXIT_WHEN_IDLE) - Creates a server pipe that will be closed when no clients are connected
+   Pipes(flags=ConnectionFlags.CLIENT, job_name="your process goal (webview, flask, download_file, etc)") - Creates a client connection
+
+ 2: Adding/Removing listeners:
+  from utils.pipe import Pipes
+
+  1 - @Pipes.add_listener -- this will take the function name as the listener name
+  2 - @Pipes.add_listener(name="sum") -- this will use the given name as the listener name
+  def calculate(connection_id: str, data: dict) -> None:
+    a, b = data.get("num_1", 0), data.get("num_2", 0)
+    result = a + b
+    Pipes.send({"result": result}, to_pipe_id=connection_id, listener="print_result")
+
+  3 - Pipes.add_listener(calculate)
+  4 - Pipes.add_listener(calculate, name="sum")
+
+  * NOTE: you should write keyword argument "name" when you're tring to assign custom name.
+
+  in removing:
+    - in default -> Pipes.remove_listener("calculate")
+    - with custom name -> Pipes.remove_listener("sum")
+
+ 3: Sending data:
+    - Pipes.send({"key": "value"}, to_pipe_id="connection_id (optional and provided from executed listener)", listener="listener_name", sync=Boolean)
+    - sync: if True, the function will wait for the data to be sent, if False, it will send the data in a thread and continue
+
+ 4: Exiting:
+    my_pipe = Pipes(flags=ConnectionFlags.SERVER)
+    my_pipe.exit()
+    * NOTE: the exit method should executed from an instance not from the class.
+
+-------
+
+This a simple overview of how the system works and how to use it.
+You can have a look at the class and see the methods with its own descriptions.
+
+Have a nice day <3
+"""
+
+from typing      import Callable
 from dataclasses import dataclass, field
 from enum        import IntFlag
 from config      import (
@@ -21,31 +75,79 @@ from config      import (
     APP_PIPE_SERVER_JOB,
     APP_PIPE_ALL_JOBS
 )
+from _win32typing import PyHANDLE
 import json,      atexit,    threading
 import win32pipe, win32file, pywintypes
 import uuid,      time,      os
 
 
 class ServerPipeAlreadyExistsError(Exception):
+    """
+    An exception raised when a server pipe (independent process) already created and running.
+    Throws when trying to create a new server pipe.
+    """
+
     pass
 
 class ServerPipeNotFoundError(Exception):
+    """
+    An exception raised when a server pipe (independent process) is not created yet.
+    Throws when trying to create new client connection.
+    """
+    
     pass
 
 class ConnectionFlags(IntFlag):
+    """
+    Flags to determine the type of connection you want from the pipes.
+      - SERVER: To create a new server pipe.
+        * SERVER_EXIT_WHEN_IDLE: To let the server decide if it should destory it self or not ( based on connection, if there aren't any connections, it will destroy itself ).
+      - CLIENT: To create a new client connection.
+    """
+    
     SERVER                 = 0x1
     SERVER_EXIT_WHEN_IDLE  = 0x2
     CLIENT                 = 0x4
 
 @dataclass
 class ConnectionData:
+    """
+    A template for any client connection data. Mostly will used inside server process to separate clients, and in client-side just for server-side connection.
+
+    Caution: Better not to used outside of Pipes class. let the class manage it.
+
+    Attributes:
+        id         ( String         ) -> A random unique identifier for each connection.
+        handle     ( PyHANDLE | int ) -> A handle to the pipe connection, setted by the pipe library.
+        connected  ( bool           ) -> A flag to determine if the connection is connected or not.
+        job        ( String         ) -> A string to determine the job of the connection.
+        write_lock ( threading.Lock ) -> A lock to prevent multiple threads from writing to the same connection.
+    """
+
     id:         str
-    handle:     Any
+    handle:     PyHANDLE | int
     connected:  bool           = False
     job:        str            = "unknown"
     write_lock: threading.Lock = field(default_factory=threading.Lock)
 
 class PipeData:
+    """
+    A data saver class. Used to store all relevant data needed for the pipes system.
+
+    Caution: Better not to used outside of Pipes class. let the class manage it.
+
+    Attributes:
+        lock            ( threading.RLock           ) -> A reentrant lock to prevent multiple threads from accessing the same data.
+        listeners       ( dict[str, Callable]       ) -> A dictionary of listeners to be called when a message is received.
+        connections     ( dict[str, ConnectionData] ) -> A dictionary of connections to be managed.
+        client_job      ( str                       ) -> A string to determine the job of the client.
+        is_server       ( bool                      ) -> A flag to determine if the current instance is a server or not.
+        running         ( bool                      ) -> A flag to determine if the current instance is running or not.
+        exit_when_idle  ( bool                      ) -> A flag to determine if the server should exit when idle or not.
+        watcher_started ( bool                      ) -> A flag to determine if the watcher thread is started or not.
+        exit_registered ( bool                      ) -> A flag to determine if the exit handler is registered or not.
+    """
+
     lock:            threading.RLock           = threading.RLock()
     listeners:       dict[str, Callable]       = {}
     connections:     dict[str, ConnectionData] = {}
@@ -108,6 +210,13 @@ class Pipes:
             self.create_client(job_name)
 
     def create_server(self, exit_when_idle: bool = False) -> None:
+        """
+        Creates a server pipe. This will only executed from constructor, otherwise it will skipped.
+
+        Args:
+            exit_when_idle (bool): If True, the server will exit when no clients are connected.
+        """
+
         if self.__created: return
         self.__created = True
 
@@ -121,6 +230,12 @@ class Pipes:
         threading.Thread(target=self.__server_loop, daemon=True).start()
 
     def create_client(self, job_name: str) -> None:
+        """
+        Creates a client pipe. This will only executed from constructor, otherwise it will skipped.
+
+        Args:
+            job_name (str): The name of the job to connect to.
+        """
         if self.__created: return
         self.__created = True
 
@@ -176,6 +291,8 @@ class Pipes:
         for connection in connections:
             self.__drop(connection)
 
+        self.__unregister_exit()
+
     def disconnect_job(self, job: str) -> None:
         """
         Disconnects a specific job.
@@ -203,6 +320,18 @@ class Pipes:
         to_pipe_id: str | None = None,
         sync:       bool       = False
     ) -> None:
+        """
+        Sends data through the pipe.
+
+        Args:
+            data       (dict):       The data to send.
+            listener   (str | None): The listener to send the data to.
+            job        (str | None): The job to send the data to, if it provided as None, it will be sent to all running connected clients.
+            to_pipe_id (str | None): The pipe ID to send the data to.
+            sync       (bool):       If True, the data will be sent synchronously.
+
+        if both job and to_pipe_id aren't provided, the data will be sent automatically to server-side and will be handled there.
+        """
         if not isinstance(data, dict):
             data = {}
 
@@ -315,6 +444,7 @@ class Pipes:
         """
         Keeps the server alive until the process is terminated.
         """
+
         with PipeData.lock:
             if not PipeData.is_server:
                 return
@@ -324,6 +454,11 @@ class Pipes:
 
     @classmethod
     def __server_loop(cls) -> None:
+        """
+        The main server loop that handles incoming connections and data.
+        Warning: this method runs in a separate thread and should not be called directly. Also, it must be executed once by the Pipes system.
+        """
+
         while PipeData.running:
             connection = None
 
@@ -362,6 +497,11 @@ class Pipes:
 
     @classmethod
     def __client_loop(cls, connection: ConnectionData) -> None:
+        """
+        The client loop that handles incoming data from a connected pipe.
+        Warning: this method runs in a separate thread and should not be called directly. Also, it must be executed once by each connected pipe.
+        """
+
         try:
             while PipeData.running and connection.connected:
                 try:
@@ -445,6 +585,10 @@ class Pipes:
         exclude:    str | None = None,
         sync:       bool       = False
     ) -> None:
+        """
+        Routes a message to the specified job or all jobs.
+        Warning: this method should not be called outside the send method.
+        """
         if not isinstance(payload, bytes) or not payload:
             return
 
@@ -482,6 +626,11 @@ class Pipes:
 
     @classmethod
     def __start_watcher(cls) -> None:
+        """
+        Starts the idle watcher thread. Will be executed once and only if the SERVER_EXIT_WHEN_IDLE flag is setted.
+        Warning: this method should not be called outside the Pipes system.
+        """
+
         with PipeData.lock:
             if PipeData.watcher_started or not PipeData.exit_when_idle:
                 return
@@ -531,6 +680,11 @@ class Pipes:
                 pass
 
     def __register_exit(self) -> None:
+        """
+        Registers the exit handler for the pipes system.
+        Warning: this method should not be called outside the Pipes system.
+        """
+
         with PipeData.lock:
             if PipeData.exit_registered:
                 return
@@ -540,6 +694,11 @@ class Pipes:
         atexit.register(self.__on_exit)
 
     def __unregister_exit(self) -> None:
+        """
+        Unregisters the exit handler for the pipes system.
+        Warning: this method should not be called outside the Pipes system.
+        """
+
         with PipeData.lock:
             if not PipeData.exit_registered:
                 return
@@ -550,11 +709,21 @@ class Pipes:
 
     @classmethod
     def __on_get_job(cls, connection: ConnectionData, data: dict) -> None:
+        """
+        A built-in listener that returns its own job when asked for it.
+        Used in client-side. It helps the server-side to identify the client's job.
+        """
+
         if not PipeData.is_server:
             cls.send({"job": PipeData.client_job}, listener="__set_job", job=APP_PIPE_SERVER_JOB)
 
     @classmethod
     def __on_set_job(cls, connection: ConnectionData, data: dict) -> None:
+        """
+        A built-in listener that updates the connection's job.
+        Used in server-side. It updates the connection's job when the client sends its job.
+        """
+
         job = data.get("job")
         if PipeData.is_server and isinstance(job, str) and len(job.strip()) > 0:
             connection.job = job
@@ -562,11 +731,21 @@ class Pipes:
 
     @classmethod
     def __on_signout(cls, connection: ConnectionData, data: dict) -> None:
+        """
+        A built-in listener that drops the connection when the client signs out.
+        Used in server-side.
+        """
+
         if PipeData.is_server:
             cls.__drop(connection)
             cls.__log(f"[SERVER] Connection \"{connection.id}\" signed out")
 
     def __on_exit(self) -> None:
+        """
+        A method that executed automatically when the client process shuts down.
+        It helps the server to drop the connection in short time.
+        """
+
         if not PipeData.is_server:
             try:
                 self.send({}, listener="__signout", job=APP_PIPE_SERVER_JOB, sync=True)
@@ -575,6 +754,10 @@ class Pipes:
 
     @staticmethod
     def __to_bytes(data: str) -> bytes:
+        """
+        A method to convert a string to bytes. It used when creating new payload.
+        """
+
         if not isinstance(data, str) or data.strip() == "":
             return b""
         
@@ -585,6 +768,10 @@ class Pipes:
 
     @staticmethod
     def __to_str(data: bytes) -> str:
+        """
+        A method to convert bytes to string. It used when parsing payload.
+        """
+
         if not isinstance(data, bytes) or len(data) == 0:
             return ""
 
@@ -595,6 +782,12 @@ class Pipes:
 
     @staticmethod
     def __new_payload(data: dict) -> bytes:
+        """
+        A method to create a new payload from a dictionary.
+        
+        Returns:
+            bytes: The payload as bytes to travling in pipes.
+        """
         try:
             return Pipes.__to_bytes(json.dumps(data))
         except Exception:
@@ -602,6 +795,12 @@ class Pipes:
 
     @staticmethod    
     def __parse_payload(data: bytes) -> dict:
+        """
+        A method to parse a payload from bytes to dictionary.
+        
+        Returns:
+            dict: The payload as dictionary (recived data from pipes).
+        """
         try:
             return json.loads(Pipes.__to_str(data))
         except Exception:
@@ -609,6 +808,10 @@ class Pipes:
 
     @staticmethod
     def __log(message: str) -> None:
+        """
+        A method prints a debugging messages when APP_PIPE_DEBUG_ENABLED is True.
+        Better to be disabled in production mode.
+        """
         if not APP_PIPE_DEBUG_ENABLED:
             return
 

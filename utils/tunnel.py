@@ -1,3 +1,13 @@
+"""
+===============[ Tunneling system ]===============
+
+This system allows you to make an opened port on your device as a public URL that anyone can access it.
+The life-time of the public URL is until the tunnel is closed, the process is terminated, or the host device is shutted down.
+
+Please have a look at the Tunnel class and read the descriptions to understand how to use this system.
+Have a nice day <3
+"""
+
 from typing      import List, Self, Tuple, Callable
 from dataclasses import dataclass
 from .file       import get_local_app_data_path
@@ -9,6 +19,7 @@ class Processes:
     """
     A class to manage tunnels processes and holds their ports to avoid conflicts.
     """
+
     all_processes: List[subprocess.Popen] | None = None
     ports_in_use: set[int] | None                = None
 
@@ -16,6 +27,7 @@ class ErrorCodes:
     """
     Error codes for tunnel operations. Helps to identify the problem.
     """
+
     SERVICE_NOT_AVAILABLE: int       = 0x01
     TUNNEL_ALREADY_CREATED: int      = 0x02
     TUNNEL_CREATING: int             = 0x03
@@ -30,6 +42,7 @@ class Response:
     """
     Response class is a formula for all responses, makes it easier to handle your operations.
     """
+
     success: bool                 = False
     error_code: ErrorCodes | None = None
     reason: str | None            = None
@@ -105,7 +118,7 @@ class Tunnel:
             )
 
         self.is_creating    = True
-        service_found, path = self.__has_cloudflare_service()
+        service_found, path = self.has_cloudflare_service()
 
         if (not service_found):
             del self.is_creating
@@ -257,6 +270,17 @@ class Tunnel:
         destination: Path | None = None,
         temp:        Path | None = None
     ) -> None:
+        """
+        Downloads the service from the given URL and saves it to the destination path.
+        Caution: This function should not be called directly, use "Tunnel.download_service" method instead.
+        
+        Args:
+            callback:     A callback function to be called when the download is complete.
+            url:          The URL to download the service from.
+            destination:  The path to save the downloaded service.
+            temp:         The temporary path to save the downloaded service.
+        """
+
         if Tunnel.__is_downloading or url is None or destination is None or temp is None:
             return
 
@@ -300,6 +324,7 @@ class Tunnel:
         Returns:
             Response: A response object containing the result of the check.
         """
+
         if not Tunnel.__check_int_validality(port):
             return Response(
                 reason="Port number must be an integer",
@@ -337,7 +362,8 @@ class Tunnel:
 
         return value is not None and isinstance(value, int)
 
-    def __has_cloudflare_service(self) -> Tuple[bool, str | None]:
+    @staticmethod
+    def has_cloudflare_service() -> Tuple[bool, str | None]:
         """
         Check if the cloudflare service is available.
         
@@ -347,16 +373,16 @@ class Tunnel:
 
         storage_path = get_local_app_data_path()
         if not storage_path.exists():
-            return False, None
+            return False, f"Cloudflare service not found as \"{config.CLOUDFLARE_SERVICE_NAME}.exe\""
         
         if not storage_path.is_dir():
-            return False, None
+            return False, f"Cloudflare service not found as \"{config.CLOUDFLARE_SERVICE_NAME}.exe\""
 
         for file in storage_path.iterdir():
             if file.suffix != ".exe":
                 continue
 
-            if file.name in config.CLOUDFLARE_SERVICE_NAME:
+            if file.name in [f"{config.CLOUDFLARE_SERVICE_NAME}.exe", config.CLOUDFLARE_SERVICE_NAME]:
                 return True, file.resolve()
 
-        return False, None
+        return False, f"Cloudflare service not found as \"{config.CLOUDFLARE_SERVICE_NAME}.exe\""

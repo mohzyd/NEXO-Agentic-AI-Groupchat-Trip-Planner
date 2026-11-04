@@ -3,12 +3,12 @@ from utils import (
     WebViewHandler,
     Pipes, ConnectionFlags,
     ServerPipeAlreadyExistsError,
-    ServerPipeNotFoundError,
     get_file_in_app_path,
     get_runnable_path
 )
 from api.webview import API
 from helper      import create_server_listeners
+from config      import APP_NAME, APP_DEBUG
 import argparse,   subprocess
 import random, os, time
 import threading
@@ -39,7 +39,7 @@ def create_interface() -> None:
         options=WebViewCreationOptions(
             width=600, height=800, min_width=600, min_height=800,
             max_width=600, max_height=800, resizable=False,
-            on_center=True, title="NEXO App", api=api
+            on_center=True, title=APP_NAME, api=api
         ),
         html_path=interface_path
     )
@@ -94,7 +94,7 @@ def main() -> None:
                 create_interface()
 
             except Exception as e:
-                print(f"[CLIENT ERROR] {type(e).__name__} : {e}")
+                if APP_DEBUG: print(f"[CLIENT ERROR] {type(e).__name__} : {e}")
 
 
 

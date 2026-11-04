@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="../css/webview/cloudflared-modal.css">
     <link rel="stylesheet" href="../css/webview/helpers.css">
 
+    <script src="../js/webview/api.js"               defer></script>
     <script src="../js/webview/chat-modal.js"        defer></script>
     <script src="../js/webview/cloudflared-modal.js" defer></script>
     <script src="../js/webview/script.js"            defer></script>
@@ -380,7 +381,7 @@
                         <span class="view-step">AUTOMATIC INSTALLATION</span>
                     </div>
 
-                    <div class="progress-section" hidden>
+                    <div class="progress-section" id="progressSection" hidden>
 
                         <div class="progress-heading">
                             <div>
@@ -484,7 +485,7 @@
                                 <p>Place the downloaded file in this directory:</p>
 
                                 <div class="installation-path">
-                                    <code id="cloudflaredPath">%LOCALAPPDATA%\YourApp\Dependencies\Cloudflared\cloudflared.exe</code>
+                                    <code id="cloudflaredPath">%LOCALAPPDATA%\{{appDataFileName}}\{{cloudflaredServiceName}}</code>
 
                                     <button type="button" class="copy-path-button"
                                             aria-label="Copy installation path"
@@ -629,6 +630,8 @@
                     <button class="copy">Copy</button>
                 </div>
             </div>
+
+            <div class="chat ghost"></div>
         </div>
     </div>
 </body>
