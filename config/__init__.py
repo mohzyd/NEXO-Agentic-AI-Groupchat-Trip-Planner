@@ -1,3 +1,4 @@
+from typing import Literal
 import win32pipe
 
 APP_NAME                = "NEXO App"
@@ -14,6 +15,19 @@ CLOUDFLARE_SERVICE_URLS = {
     "arm64":   "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-arm64.exe",
     "aarch64": "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-arm64.exe",
 }
+
+# Crypto Configuration (In a final productive mode, these values shouldn't be existed in application source code. For now, it's okay to have them here)
+APP_CRYPTO_SALT_SIZE:      int   = 16
+APP_CRYPTO_NONCE_SIZE:     int   = 12
+APP_CRYPTO_KEY_SIZE:       int   = 32
+APP_CRYPTO_SCRYPT_N:       int   = (2**15)
+APP_CRYPTO_SCRYPT_R:       int   = 8
+APP_CRYPTO_SCRYPT_P:       int   = 1
+APP_CRYPTO_HEADER:         bytes = b"nexo_app_c9befee16b746ccbe2318e4536fe64ea"
+APP_CRYPTO_ENCRYPTION_KEY: str   = "nexo_app_a4df4fa4c20349f3439f8edb4f37e92f"
+
+# Storage types
+APP_STORAGES = Literal["chats"]
 
 APP_PIPE_DEBUG_ENABLED:        bool       = True
 APP_PIPE_NAME:                 str        = r"\\.\pipe\\" + APP_NAME.replace(" ", "").upper()

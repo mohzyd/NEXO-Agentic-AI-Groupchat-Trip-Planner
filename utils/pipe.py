@@ -75,7 +75,6 @@ from config      import (
     APP_PIPE_SERVER_JOB,
     APP_PIPE_ALL_JOBS
 )
-from _win32typing import PyHANDLE
 import json,      atexit,    threading
 import win32pipe, win32file, pywintypes
 import uuid,      time,      os
@@ -125,7 +124,7 @@ class ConnectionData:
     """
 
     id:         str
-    handle:     PyHANDLE | int
+    handle:     pywintypes.HANDLEType | int
     connected:  bool           = False
     job:        str            = "unknown"
     write_lock: threading.Lock = field(default_factory=threading.Lock)

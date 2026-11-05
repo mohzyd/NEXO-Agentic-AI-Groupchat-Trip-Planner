@@ -35,7 +35,6 @@ const copyTo = (from, to) => {
     }
 }
 
-// Should return a string in format like "21 Minutes" or "Hour" or "2 Hours"
 const calculateExpireIn = (timestamp) => {
     const now        = new Date();
     const expireTime = new Date(timestamp);
