@@ -1,0 +1,695 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Anonymous Chat</title>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Inter, system-ui, sans-serif;
+            background: #09090f;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 1000px;
+            height: 90vh;
+            background: #11111b;
+            border: 1px solid #252538;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 80px #0008;
+        }
+
+        /* Header */
+
+        .header {
+            padding: 20px 24px;
+            background: #151522;
+            border-bottom: 1px solid #252538;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #88889e;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            background: #e05252;
+            border-radius: 50%;
+        }
+
+        .status-dot.connected {
+            background: #36d399;
+            box-shadow: 0 0 10px #36d39988;
+        }
+
+        /* Messages */
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+            gap: 5px;
+        }
+
+        .message.own {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message-header {
+            display: flex;
+            gap: 9px;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .nickname {
+            color: #a78bfa;
+            font-weight: 700;
+        }
+
+        .own .nickname {
+            color: #60a5fa;
+        }
+
+        .timestamp {
+            color: #66667d;
+            font-size: 10px;
+        }
+
+        .message-content {
+            background: #202033;
+            padding: 12px 15px;
+            border-radius: 12px;
+            color: #eeeef5;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
+        }
+
+        .own .message-content {
+            background: #5141a5;
+            color: white;
+            border-bottom-right-radius: 3px;
+        }
+
+        .message:not(.own) .message-content {
+            border-bottom-left-radius: 3px;
+        }
+
+        .system-message {
+            align-self: center;
+            color: #77778e;
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        /* Input */
+
+        .input-area {
+            padding: 18px 20px;
+            background: #151522;
+            border-top: 1px solid #252538;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            flex: 1;
+            min-width: 0;
+            background: #202033;
+            border: 1px solid #303049;
+            border-radius: 10px;
+            padding: 14px 16px;
+            color: white;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .input-wrapper input:focus {
+            border-color: #8b5cf6;
+        }
+
+        .input-wrapper input::placeholder {
+            color: #77778e;
+        }
+
+        .send-button {
+            background: #7654e8;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 22px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+
+        .send-button:hover {
+            background: #8b6aff;
+        }
+
+        .send-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Username modal */
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: #000b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 380px;
+            background: #151522;
+            border: 1px solid #303049;
+            padding: 30px;
+            border-radius: 16px;
+        }
+
+        .modal-content h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+        .modal-content p {
+            color: #9999ad;
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 13px;
+            background: #202033;
+            border: 1px solid #303049;
+            color: white;
+            border-radius: 8px;
+            outline: none;
+            margin-bottom: 12px;
+        }
+
+        .modal-content button {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            background: #7654e8;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .modal-content button:hover {
+            background: #8b6aff;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scrollbar */
+
+        .messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: #34344c;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                align-items: stretch;
+            }
+
+            .chat-container {
+                height: 100vh;
+                border-radius: 0;
+                border: none;
+            }
+
+            .messages {
+                padding: 16px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .header {
+                padding: 16px;
+            }
+
+            .input-area {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <header class="header">
+
+        <div>
+            <h1>✦ Anonymous Chat</h1>
+            <p>A place to talk freely.</p>
+        </div>
+
+        <div class="status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Connecting...</span>
+        </div>
+
+    </header>
+
+    <main class="messages" id="messages">
+
+        <div class="system-message">
+            Welcome to Anonymous Chat
+        </div>
+
+    </main>
+
+    <footer class="input-area">
+
+        <div class="input-wrapper">
+
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Write a message..."
+                maxlength="4000"
+                autocomplete="off"
+                disabled
+            >
+
+            <button
+                class="send-button"
+                id="sendButton"
+                disabled
+            >
+                Send
+            </button>
+
+        </div>
+
+    </footer>
+
+</div>
+
+
+<!-- Username modal -->
+
+<div class="modal" id="usernameModal">
+
+    <div class="modal-content">
+
+        <h2>Welcome 👋</h2>
+
+        <p>
+            Choose a nickname to join the conversation.
+            You can change it whenever you reconnect.
+        </p>
+
+        <input
+            type="text"
+            id="nicknameInput"
+            placeholder="Your nickname"
+            maxlength="30"
+            value="Anonymous"
+        >
+
+        <button id="joinButton">
+            Join Chat
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    // Connect to the Flask-SocketIO server.
+
+    const socket = io({
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000
+    });
+
+
+    // DOM elements.
+
+    const messagesElement = document.getElementById("messages");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+
+    const usernameModal = document.getElementById("usernameModal");
+    const nicknameInput = document.getElementById("nicknameInput");
+    const joinButton = document.getElementById("joinButton");
+
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+
+
+    // Local identity storage.
+
+    let nickname = "Anonymous";
+    let identity = null;
+    let joined = false;
+
+
+    const savedIdentity = {
+        previousSID: localStorage.getItem("previousSID"),
+        recoveryToken: localStorage.getItem("recoveryToken")
+    };
+
+
+    // Connection status.
+
+    function updateStatus(connected) {
+
+        statusDot.classList.toggle("connected", connected);
+
+        statusText.textContent = connected
+            ? "Connected"
+            : "Disconnected";
+
+        messageInput.disabled = !connected || !joined;
+        sendButton.disabled = !connected || !joined;
+
+    }
+
+
+    // Socket connection.
+
+    socket.on("connect", () => {
+
+        updateStatus(true);
+
+        // Rejoin after initial connection or reconnection.
+        joined = false;
+
+        usernameModal.classList.remove("hidden");
+
+        nicknameInput.value = nickname;
+
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+
+    });
+
+
+    socket.on("disconnect", () => {
+
+        updateStatus(false);
+
+        joined = false;
+
+    });
+
+
+    socket.on("connect_error", (error) => {
+
+        console.error("Connection error:", error);
+
+        statusText.textContent = error.message || "Connection error";
+
+    });
+
+
+    // Join chat.
+
+    function joinChat() {
+
+        if (!socket.connected) return;
+
+        nickname = nicknameInput.value.trim() || "Anonymous";
+
+        socket.emit("join", {
+
+            nickname: nickname,
+
+            previousSID: savedIdentity.previousSID,
+
+            recoveryToken: savedIdentity.recoveryToken
+
+        });
+
+    }
+
+
+    joinButton.addEventListener("click", joinChat);
+
+    nicknameInput.addEventListener("keydown", (event) => {
+
+        if (event.key === "Enter") {
+            joinChat();
+        }
+
+    });
+
+
+    // Receive identity from backend.
+
+    socket.on("identity", (data) => {
+
+        identity = data;
+
+        savedIdentity.previousSID = data.sid;
+        savedIdentity.recoveryToken = data.recoveryToken;
+
+        localStorage.setItem("previousSID", data.sid);
+        localStorage.setItem("recoveryToken", data.recoveryToken);
+
+        joined = true;
+
+        usernameModal.classList.add("hidden");
+
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+
+        messageInput.focus();
+
+    });
+
+
+    // Message history.
+
+    socket.on("message_history", (history) => {
+
+        if (!Array.isArray(history)) return;
+
+        messagesElement.innerHTML = "";
+
+        history.forEach(message => {
+
+            displayMessage(message);
+
+        });
+
+        scrollToBottom();
+
+    });
+
+
+    // Receive new messages.
+
+    socket.on("new_message", (message) => {
+
+        displayMessage(message);
+
+    });
+
+
+    // Display message.
+
+    function displayMessage(message) {
+
+        const wrapper = document.createElement("div");
+
+        const isOwn = identity &&
+            message.userID === identity.userID;
+
+        wrapper.className = "message" + (isOwn ? " own" : "");
+
+
+        const header = document.createElement("div");
+        header.className = "message-header";
+
+        const name = document.createElement("span");
+        name.className = "nickname";
+        name.textContent = message.nickname || "Anonymous";
+
+        const timestamp = document.createElement("span");
+        timestamp.className = "timestamp";
+
+        const date = new Date(message.timestamp);
+
+        timestamp.textContent = !isNaN(date)
+            ? date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            })
+            : "";
+
+        header.appendChild(name);
+        header.appendChild(timestamp);
+
+
+        const content = document.createElement("div");
+        content.className = "message-content";
+
+        content.textContent = message.message || "";
+
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(content);
+
+        messagesElement.appendChild(wrapper);
+
+        scrollToBottom();
+
+    }
+
+
+    // Scroll to latest message.
+
+    function scrollToBottom() {
+
+        messagesElement.scrollTop = messagesElement.scrollHeight;
+
+    }
+
+
+    // Send message.
+
+    function sendMessage() {
+
+        const content = messageInput.value.trim();
+
+        if (!content || !socket.connected || !joined) {
+            return;
+        }
+
+        socket.emit("message", {
+
+            type: "text",
+
+            message: content
+
+        });
+
+        messageInput.value = "";
+
+        messageInput.focus();
+
+    }
+
+
+    sendButton.addEventListener("click", sendMessage);
+
+
+    messageInput.addEventListener("keydown", (event) => {
+
+        if (event.key === "Enter" && !event.shiftKey) {
+
+            event.preventDefault();
+
+            sendMessage();
+
+        }
+
+    });
+
+
+    // Message saving errors.
+
+    socket.on("message_error", (data) => {
+
+        console.error("Message error:", data.error);
+
+        alert(data.error || "Failed to send message.");
+
+    });
+
+
+    // Start.
+
+    updateStatus(false);
+
+</script>
+
+</body>
+</html>

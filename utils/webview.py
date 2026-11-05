@@ -1,7 +1,7 @@
 from pathlib import Path
 import screeninfo
 import webview
-
+from utils.pipe import Pipes, ConnectionFlags
 class WebViewCreationOptions:
     """
     Provides options for creating a webview window.
@@ -36,6 +36,7 @@ class WebViewCreationOptions:
 
 
 class WebViewHandler:
+
     __current_window: webview.Window | None = None
 
     def __init__(

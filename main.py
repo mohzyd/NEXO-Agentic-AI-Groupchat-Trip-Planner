@@ -55,6 +55,13 @@ def main() -> None:
         try:
             server = Pipes(flags=ConnectionFlags.SERVER | ConnectionFlags.SERVER_EXIT_WHEN_IDLE)
             create_server_listeners()
+            pipe_deadline = time.monotonic() + 5
+            while not server.server_exists() and time.monotonic() < pipe_deadline:
+                time.sleep(0.05)
+            if not server.server_exists():
+                raise RuntimeError("Pipe server did not become ready.")
+
+            create_child("flask")
             create_child("webview")
             server.keep_server_alive_until()
 
@@ -63,7 +70,12 @@ def main() -> None:
 
     elif args.type == "client":
 
-        if args.job == "webview":
+        if args.job == "flask":
+            from server.main import run_server
+
+            run_server()
+
+        elif args.job == "webview":
             
             try:
                 checker = Pipes(
