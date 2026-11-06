@@ -464,14 +464,16 @@
 
     function updateStatus(connected) {
 
+        const readOnly = Boolean(roomInfo?.isExpired);
+
         statusDot.classList.toggle("connected", connected);
 
         statusText.textContent = connected
-            ? "Connected"
+            ? (readOnly ? "Read-only" : "Connected")
             : "Disconnected";
 
-        messageInput.disabled = !connected || !joined;
-        sendButton.disabled = !connected || !joined;
+        messageInput.disabled = !connected || !joined || readOnly;
+        sendButton.disabled = !connected || !joined || readOnly;
 
     }
 
@@ -511,9 +513,15 @@
 
             roomInfo = await response.json();
             roomName.textContent = roomInfo.name || "Chat room";
-            roomDetails.textContent = `${roomInfo.memberCount} members | ${formatRemaining(roomInfo.secondsRemaining)}`;
+            const expiryText = roomInfo.isExpired
+                ? "Expired · read-only"
+                : formatRemaining(roomInfo.secondsRemaining);
+            roomDetails.textContent = `${roomInfo.memberCount} members | ${expiryText}`;
             passwordGroup.classList.toggle("hidden", !roomInfo.isProtected);
             roomPasswordInput.required = Boolean(roomInfo.isProtected);
+            if (roomInfo.isExpired) {
+                updateStatus(socket.connected);
+            }
         } catch (error) {
             roomDetails.textContent = error.message || "Room details unavailable";
         }
@@ -643,6 +651,16 @@
     });
 
 
+    socket.on("room_read_only", (data) => {
+
+        roomInfo = { ...roomInfo, isExpired: true };
+        updateStatus(socket.connected);
+        joinError.textContent = data.error || "This room is read-only.";
+        joinError.classList.remove("hidden");
+
+    });
+
+
     // Receive identity from backend.
 
     socket.on("identity", (data) => {
@@ -662,8 +680,7 @@
 
         usernameModal.classList.add("hidden");
 
-        messageInput.disabled = false;
-        sendButton.disabled = false;
+        updateStatus(socket.connected);
 
         messageInput.focus();
 
@@ -764,7 +781,7 @@
 
         const content = messageInput.value.trim();
 
-        if (!content || !socket.connected || !joined) {
+        if (!content || !socket.connected || !joined || roomInfo?.isExpired) {
             return;
         }
 

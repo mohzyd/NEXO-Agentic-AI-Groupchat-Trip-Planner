@@ -147,6 +147,7 @@ def create_room_server(room_id: str):
             "room_id": room_id,
             "name": groupchat["name"],
             "isProtected": groupchat["isProtected"],
+            "isExpired": room_expired(),
             "memberCount": member_count,
             "createdAt": groupchat.get("createdAt"),
             "expiresAt": expires_at,
@@ -180,9 +181,6 @@ def create_room_server(room_id: str):
 
         details = get_room_details()
 
-        if details["secondsRemaining"] == 0:
-            return jsonify({"error": "This room has expired."}), 410
-
         return jsonify(details)
 
     @app.route("/_internal/details")
@@ -201,10 +199,7 @@ def create_room_server(room_id: str):
 
     @socketio.on("connect")
     def handle_connect():
-        """Register a pending socket unless the room has expired."""
-
-        if room_expired():
-            return False
+        """Register a pending socket, including read-only expired rooms."""
 
         with state_lock:
             users[request.sid] = None
@@ -217,14 +212,6 @@ def create_room_server(room_id: str):
             return
 
         sid = request.sid
-
-        if room_expired():
-            emit(
-                "room_closed",
-                {"error": "This room has expired."},
-                to=sid
-            )
-            return
 
         if groupchat["isProtected"]:
             supplied_password = data.get("password")
@@ -304,11 +291,9 @@ def create_room_server(room_id: str):
             return
 
         if room_expired():
-            emit(
-                "room_closed",
-                {"error": "This room has expired."},
-                to=request.sid
-            )
+            emit("room_read_only", {
+                "error": "This room has expired; sending messages is disabled."
+            }, to=request.sid)
             return
 
         message_content = data.get("message", "")

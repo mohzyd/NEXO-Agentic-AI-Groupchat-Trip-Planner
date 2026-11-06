@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from secrets import token_urlsafe
-from threading import RLock, Timer
+from threading import RLock
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -173,7 +173,6 @@ class RoomManager:
                 "control_token": control_token,
                 "created_at": created_at,
                 "expires_at": expires_at,
-                "expiry_timer": None,
                 "isInactive": False
             }
 
@@ -183,16 +182,6 @@ class RoomManager:
 
                 self.rooms[room_id] = room
                 self.room_hosts[hostname] = room_id
-
-            if expires_at is not None:
-                timer = Timer(
-                    max(0, (expires_at - datetime.now(timezone.utc)).total_seconds()),
-                    self.delete_room,
-                    args=(room_id,)
-                )
-                timer.daemon = True
-                room["expiry_timer"] = timer
-                timer.start()
 
             print(f"[RoomManager] Created room {room_id}: {response.url}")
             return self.get_room(room_id)
@@ -230,6 +219,7 @@ class RoomManager:
             if expires_at is not None
             else None
         )
+        is_expired = seconds_left == 0
         name = groupchat["name"]
         short_name = "".join(part[0] for part in name.split()[:3]).upper()
 
@@ -239,8 +229,13 @@ class RoomManager:
             "name": name,
             "short_name": short_name or name[:2].upper(),
             "url": room["url"],
-            "status": "Inactive" if room["isInactive"] else "Active",
+            "status": (
+                "Inactive" if room["isInactive"] else
+                "Expired" if is_expired else
+                "Active"
+            ),
             "isInactive": room["isInactive"],
+            "isExpired": is_expired,
             "isProtected": groupchat["isProtected"],
             "lifetime": expires_at is None,
             "created_at": room["created_at"].isoformat(),
@@ -250,20 +245,13 @@ class RoomManager:
         }
 
     def get_room(self, room_id):
-        """Return one room, deactivating it first if its lifetime elapsed."""
+        """Return one room without closing its tunnel when its lifetime elapses."""
 
         with self.lock:
             room = self.rooms.get(room_id)
 
         if room is None:
             return None
-
-        if (
-            not room["isInactive"] and
-            room["expires_at"] is not None and
-            datetime.now(timezone.utc) >= room["expires_at"]
-        ):
-            self.delete_room(room_id)
 
         return self._public_room(room)
 
@@ -312,11 +300,6 @@ class RoomManager:
             room["isInactive"] = True
             room["groupchat"]["isInactive"] = True
             self.room_hosts.pop(room["hostname"], None)
-            timer = room.get("expiry_timer")
-            room["expiry_timer"] = None
-
-        if timer is not None:
-            timer.cancel()
 
         self._close_tunnel(room["tunnel"])
         self._stop_worker(room["worker"])

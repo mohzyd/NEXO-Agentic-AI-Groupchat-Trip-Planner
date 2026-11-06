@@ -32,7 +32,7 @@ class FlaskConf:
 app = Flask(__name__)
 app.config.from_object(FlaskConf)
 room_manager = RoomManager()
-ADMIN_TOKEN = os.environ.get("CHAT_ADMIN_TOKEN","ARandomSecret123")
+ADMIN_TOKEN = os.environ.get("CHAT_ADMIN_TOKEN",token_urlsafe(32))
 PIPE_SHUTDOWN_TOKEN = token_urlsafe(32)
 shutdown_event = Event()
 
@@ -46,8 +46,7 @@ def require_admin() -> None:
             description="Room management is not configured."
         )
 
-    authorization = request.headers.get("Authorization", "")
-    supplied_token = authorization.removeprefix("Bearer ")
+    supplied_token = request.headers.get("Authorization", "")
 
     if not compare_digest(supplied_token, ADMIN_TOKEN):
         abort(401, description="Unauthorized.")
