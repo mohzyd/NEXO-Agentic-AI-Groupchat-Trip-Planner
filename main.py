@@ -48,10 +48,20 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", type=str, required=False, default="server")
     parser.add_argument("--job", type=str,  required=False, default="")
+    parser.add_argument("--room-id", type=str, required=False, default="")
+    parser.add_argument("--port", type=int, required=False)
 
     args   = parser.parse_args()
 
-    if (args.type == "server"):
+    if args.type == "room":
+        if not args.room_id or not args.port:
+            parser.error("room workers require --room-id and --port")
+
+        from server.room_app import run_room_server
+
+        run_room_server(args.room_id, args.port)
+
+    elif args.type == "server":
         try:
             server = Pipes(flags=ConnectionFlags.SERVER | ConnectionFlags.SERVER_EXIT_WHEN_IDLE)
             create_server_listeners()

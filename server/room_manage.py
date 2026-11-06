@@ -1,114 +1,286 @@
+"""Manage room workers, Cloudflare tunnels, room metadata, and expiry."""
 
-from threading import RLock
+import json
+import os
+import socket
+import subprocess
+import time
+import urllib.error
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from secrets import token_urlsafe
+from threading import RLock, Timer
 from urllib.parse import urlparse
+from uuid import uuid4
 
-from utils.tunnel import Tunnel
+from utils.file import get_runnable_path
+from utils.tunnel import Processes, Tunnel
 
 
 class RoomManager:
+    """Own the lifecycle and public metadata for all chat rooms."""
 
-    def __init__(self, port):
+    def __init__(self):
+        """Initialize empty room and hostname registries."""
 
-        self.port = port
+        if Processes.all_processes is None:
+            Processes.all_processes = []
 
         self.rooms = {}
         self.room_hosts = {}
-
         self.lock = RLock()
 
-    def create_room(self):
+    @staticmethod
+    def _find_available_port():
+        """Return an available TCP port bound to the loopback interface."""
 
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.bind(("127.0.0.1", 0))
+            return listener.getsockname()[1]
+
+    @staticmethod
+    def _stop_worker(worker):
+        """Stop a room worker process, escalating to kill after a timeout."""
+
+        if worker is None or worker.poll() is not None:
+            return
+
+        worker.terminate()
+
+        try:
+            worker.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            worker.kill()
+            worker.wait()
+
+    @staticmethod
+    def _close_tunnel(tunnel):
+        """Close a tunnel when it has successfully started a process."""
+
+        if tunnel is None or getattr(tunnel, "process", None) is None:
+            return
+
+        try:
+            tunnel.close()
+        except Exception as error:
+            print(f"[RoomManager] Tunnel cleanup failed: {error}")
+
+    @staticmethod
+    def _wait_for_worker(worker, port, timeout=15):
+        """Poll a worker health endpoint until it is ready or fails."""
+
+        deadline = time.monotonic() + timeout
+        health_url = f"http://127.0.0.1:{port}/_health"
+
+        while time.monotonic() < deadline:
+
+            if worker.poll() is not None:
+                raise RuntimeError("Room Flask worker exited before becoming ready.")
+
+            try:
+                with urllib.request.urlopen(health_url, timeout=0.5) as response:
+                    if response.status == 200:
+                        return
+            except (OSError, urllib.error.URLError):
+                time.sleep(0.1)
+
+        raise TimeoutError("Room Flask worker did not become ready in time.")
+
+    def create_room(self, groupchat: dict):
+        """Start a room worker and tunnel, then register their room metadata."""
+
+        if not isinstance(groupchat, dict):
+            return None
+
+        is_protected = groupchat.get("isProtected", False)
+        encrypted_password = groupchat.get("encryptedPassword")
+        lifetime = groupchat.get("lifetime")
+        name = groupchat.get("name", "Anonymous Chat")
+
+        if not isinstance(is_protected, bool):
+            return None
+
+        if is_protected and not isinstance(encrypted_password, str):
+            return None
+
+        if not isinstance(name, str) or not name.strip():
+            return None
+
+        created_at = datetime.now(timezone.utc)
+        expires_at = (
+            created_at + timedelta(minutes=lifetime)
+            if lifetime is not None
+            else None
+        )
+        room_id = uuid4().hex
+        port = self._find_available_port()
+        control_token = token_urlsafe(32)
+
+        metadata = {
+            "name": name.strip(),
+            "isProtected": is_protected,
+            "isInactive": False,
+            "encryptedPassword": encrypted_password,
+            "createdAt": created_at.isoformat(),
+            "expiresAt": expires_at.isoformat() if expires_at else None,
+            "lifetime": lifetime
+        }
+
+        worker_env = os.environ.copy()
+        worker_env["ROOM_GROUPCHAT"] = json.dumps(metadata)
+        worker_env["ROOM_CONTROL_TOKEN"] = control_token
+
+        command = [
+            *get_runnable_path(),
+            "--type", "room",
+            "--room-id", room_id,
+            "--port", str(port)
+        ]
+
+        worker = None
         tunnel = None
 
         try:
-
-            tunnel = Tunnel(
-                port=self.port,
-                timeout=30
+            worker = subprocess.Popen(
+                command,
+                stdout=None,
+                stderr=None,
+                env=worker_env
             )
 
-            print("[RoomManager] Creating tunnel...")
+            self._wait_for_worker(worker, port)
 
+            tunnel = Tunnel(port=port, timeout=30)
             response = tunnel.create_tunnel()
 
-            if not response.success:
+            if not response.success or not response.url:
+                raise RuntimeError(response.reason or "Cloudflare tunnel creation failed.")
 
-                print(
-                    f"[RoomManager] Tunnel failed: "
-                    f"{response.reason}"
-                )
-
-                tunnel.close()
-
-                return None
-
-            public_url = response.url
-
-            hostname = urlparse(public_url).hostname
+            hostname = urlparse(response.url).hostname
 
             if not hostname:
-                tunnel.close()
-                return None
+                raise RuntimeError("Cloudflare returned a URL without a hostname.")
 
             hostname = hostname.lower()
-
-            room_id = __import__("uuid").uuid4().hex
-
             room = {
                 "room_id": room_id,
-                "url": public_url,
+                "url": response.url,
                 "hostname": hostname,
-                "tunnel": tunnel
+                "port": port,
+                "worker": worker,
+                "tunnel": tunnel,
+                "groupchat": metadata,
+                "control_token": control_token,
+                "created_at": created_at,
+                "expires_at": expires_at,
+                "expiry_timer": None,
+                "isInactive": False
             }
 
             with self.lock:
-
                 if hostname in self.room_hosts:
-
-                    tunnel.close()
-
-                    return None
+                    raise RuntimeError("Cloudflare returned a duplicate room hostname.")
 
                 self.rooms[room_id] = room
-
                 self.room_hosts[hostname] = room_id
 
-            print("=" * 50)
-            print(f"[RoomManager] Room created: {room_id}")
-            print(f"[RoomManager] URL: {public_url}")
-            print("=" * 50)
+            if expires_at is not None:
+                timer = Timer(
+                    max(0, (expires_at - datetime.now(timezone.utc)).total_seconds()),
+                    self.delete_room,
+                    args=(room_id,)
+                )
+                timer.daemon = True
+                room["expiry_timer"] = timer
+                timer.start()
 
-            return {
-                "room_id": room_id,
-                "url": public_url
-            }
+            print(f"[RoomManager] Created room {room_id}: {response.url}")
+            return self.get_room(room_id)
 
         except Exception as error:
-
-            if tunnel is not None:
-                tunnel.close()
-
-            print(
-                f"[RoomManager] Creation error: {error}"
-            )
-
+            print(f"[RoomManager] Room creation failed: {error}")
+            self._close_tunnel(tunnel)
+            self._stop_worker(worker)
             return None
 
+    def _read_worker_details(self, room):
+        """Read private live details from a worker using its control token."""
+
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{room['port']}/_internal/details",
+            headers={
+                "X-Room-Control-Token": room["control_token"]
+            }
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=2) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except Exception:
+            return {"memberCount": 0}
+
+    def _public_room(self, room):
+        """Build room metadata safe to return from the management API."""
+
+        details = self._read_worker_details(room)
+        groupchat = room["groupchat"]
+        expires_at = room["expires_at"]
+        seconds_left = (
+            max(0, int((expires_at - datetime.now(timezone.utc)).total_seconds()))
+            if expires_at is not None
+            else None
+        )
+        name = groupchat["name"]
+        short_name = "".join(part[0] for part in name.split()[:3]).upper()
+
+        return {
+            "id": room["room_id"],
+            "room_id": room["room_id"],
+            "name": name,
+            "short_name": short_name or name[:2].upper(),
+            "url": room["url"],
+            "status": "Inactive" if room["isInactive"] else "Active",
+            "isInactive": room["isInactive"],
+            "isProtected": groupchat["isProtected"],
+            "lifetime": expires_at is None,
+            "created_at": room["created_at"].isoformat(),
+            "expire_time": expires_at.isoformat() if expires_at else None,
+            "seconds_remaining": seconds_left,
+            "member_count": 0 if room["isInactive"] else details.get("memberCount", 0)
+        }
+
     def get_room(self, room_id):
+        """Return one room, deactivating it first if its lifetime elapsed."""
 
         with self.lock:
-
             room = self.rooms.get(room_id)
 
-            if room is None:
-                return None
+        if room is None:
+            return None
 
-            return {
-                "room_id": room["room_id"],
-                "url": room["url"]
-            }
+        if (
+            not room["isInactive"] and
+            room["expires_at"] is not None and
+            datetime.now(timezone.utc) >= room["expires_at"]
+        ):
+            self.delete_room(room_id)
+
+        return self._public_room(room)
+
+    def list_rooms(self):
+        """Return public metadata for active and inactive rooms."""
+
+        with self.lock:
+            room_ids = list(self.rooms)
+
+        return [
+            room
+            for room_id in room_ids
+            if (room := self.get_room(room_id)) is not None
+        ]
 
     def get_room_by_host(self, hostname):
+        """Resolve an active public hostname to its room identifier."""
 
         if not isinstance(hostname, str):
             return None
@@ -116,73 +288,46 @@ class RoomManager:
         hostname = hostname.split(":")[0].lower()
 
         with self.lock:
-
             return self.room_hosts.get(hostname)
 
-    def list_rooms(self):
-
-        with self.lock:
-
-            return [
-                {
-                    "room_id": room["room_id"],
-                    "url": room["url"]
-                }
-                for room in self.rooms.values()
-            ]
-
     def get_tunnel(self, room_id):
+        """Return the managed tunnel object for a room, if present."""
 
         with self.lock:
+            room = self.rooms.get(room_id)
+            return room["tunnel"] if room else None
 
+    def delete_room(self, room_id):
+        """Soft-delete a room by stopping it and preserving its metadata."""
+
+        with self.lock:
             room = self.rooms.get(room_id)
 
             if room is None:
                 return None
 
-            return room["tunnel"]
+            if room["isInactive"]:
+                return room_id
 
-    def delete_room(self, room_id):
+            room["isInactive"] = True
+            room["groupchat"]["isInactive"] = True
+            self.room_hosts.pop(room["hostname"], None)
+            timer = room.get("expiry_timer")
+            room["expiry_timer"] = None
 
-        with self.lock:
+        if timer is not None:
+            timer.cancel()
 
-            room = self.rooms.pop(room_id, None)
-
-            if room is None:
-                return None
-
-            self.room_hosts.pop(
-                room["hostname"],
-                None
-            )
-
-        tunnel = room["tunnel"]
-
-        try:
-
-            if tunnel.is_running():
-                tunnel.close()
-
-        except Exception as error:
-
-            print(
-                f"[RoomManager] Tunnel cleanup failed: {error}"
-            )
-
-        print(
-            f"[RoomManager] Room deleted: {room_id}"
-        )
-
+        self._close_tunnel(room["tunnel"])
+        self._stop_worker(room["worker"])
+        print(f"[RoomManager] Marked room inactive: {room_id}")
         return room_id
 
     def close_all_rooms(self):
+        """Deactivate every room during manager shutdown."""
 
         with self.lock:
-
-            room_ids = list(self.rooms.keys())
+            room_ids = list(self.rooms)
 
         for room_id in room_ids:
-
             self.delete_room(room_id)
-
-        print("[RoomManager] All rooms closed.")

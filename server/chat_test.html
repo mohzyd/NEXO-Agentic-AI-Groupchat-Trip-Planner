@@ -320,8 +320,8 @@
     <header class="header">
 
         <div>
-            <h1>✦ Anonymous Chat</h1>
-            <p>A place to talk freely.</p>
+            <h1 id="roomName">Anonymous Chat</h1>
+            <p id="roomDetails">Loading room details...</p>
         </div>
 
         <div class="status">
@@ -373,11 +373,10 @@
 
     <div class="modal-content">
 
-        <h2>Welcome 👋</h2>
+        <h2 id="joinTitle">Welcome</h2>
 
-        <p>
+        <p id="joinDescription">
             Choose a nickname to join the conversation.
-            You can change it whenever you reconnect.
         </p>
 
         <input
@@ -387,6 +386,18 @@
             maxlength="30"
             value="Anonymous"
         >
+
+        <div id="passwordGroup" class="hidden">
+            <input
+                type="password"
+                id="roomPasswordInput"
+                placeholder="Room password"
+                autocomplete="current-password"
+                maxlength="128"
+            >
+        </div>
+
+        <p id="joinError" class="hidden" role="alert"></p>
 
         <button id="joinButton">
             Join Chat
@@ -401,7 +412,9 @@
 
     // Connect to the Flask-SocketIO server.
 
-    const socket = io({
+    const socket = io(window.location.origin, {
+        path: "/socket.io",
+        transports: ["websocket", "polling"],
         reconnection: true,
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
@@ -417,23 +430,34 @@
 
     const usernameModal = document.getElementById("usernameModal");
     const nicknameInput = document.getElementById("nicknameInput");
+    const joinTitle = document.getElementById("joinTitle");
+    const joinDescription = document.getElementById("joinDescription");
+    const roomPasswordInput = document.getElementById("roomPasswordInput");
+    const passwordGroup = document.getElementById("passwordGroup");
+    const joinError = document.getElementById("joinError");
     const joinButton = document.getElementById("joinButton");
 
     const statusDot = document.getElementById("statusDot");
     const statusText = document.getElementById("statusText");
+    const roomName = document.getElementById("roomName");
+    const roomDetails = document.getElementById("roomDetails");
 
 
     // Local identity storage.
 
-    let nickname = "Anonymous";
+    let nickname = localStorage.getItem("roomNickname") || "Anonymous";
     let identity = null;
     let joined = false;
+    let roomInfo = null;
 
 
     const savedIdentity = {
         previousSID: localStorage.getItem("previousSID"),
         recoveryToken: localStorage.getItem("recoveryToken")
     };
+    let hasSavedHandshake = Boolean(
+        savedIdentity.previousSID && savedIdentity.recoveryToken
+    );
 
 
     // Connection status.
@@ -452,6 +476,51 @@
     }
 
 
+    function formatRemaining(seconds) {
+
+        if (seconds === null || seconds === undefined) {
+            return "No scheduled closing time";
+        }
+
+        if (seconds <= 0) {
+            return "Closing";
+        }
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+
+        if (hours > 0) {
+            return `${hours}h ${minutes}m remaining`;
+        }
+
+        return `${minutes}m remaining`;
+
+    }
+
+
+    async function refreshRoomDetails() {
+
+        try {
+            const response = await fetch("/api/room-details", {
+                cache: "no-store"
+            });
+
+            if (!response.ok) {
+                throw new Error("This room is unavailable.");
+            }
+
+            roomInfo = await response.json();
+            roomName.textContent = roomInfo.name || "Chat room";
+            roomDetails.textContent = `${roomInfo.memberCount} members | ${formatRemaining(roomInfo.secondsRemaining)}`;
+            passwordGroup.classList.toggle("hidden", !roomInfo.isProtected);
+            roomPasswordInput.required = Boolean(roomInfo.isProtected);
+        } catch (error) {
+            roomDetails.textContent = error.message || "Room details unavailable";
+        }
+
+    }
+
+
     // Socket connection.
 
     socket.on("connect", () => {
@@ -464,6 +533,16 @@
         usernameModal.classList.remove("hidden");
 
         nicknameInput.value = nickname;
+        joinTitle.textContent = hasSavedHandshake
+            ? "Welcome back"
+            : "Welcome";
+        joinDescription.textContent = hasSavedHandshake
+            ? "A saved session was found. Join to restore your identity and chat history."
+            : "Choose a nickname to join the conversation.";
+        joinButton.textContent = hasSavedHandshake
+            ? "Rejoin Chat"
+            : "Join Chat";
+        joinError.classList.add("hidden");
 
         messageInput.disabled = true;
         sendButton.disabled = true;
@@ -491,15 +570,30 @@
 
     // Join chat.
 
-    function joinChat() {
+    async function joinChat() {
 
         if (!socket.connected) return;
 
+        if (!roomInfo) {
+            await refreshRoomDetails();
+        }
+
+        if (!roomInfo) return;
+
         nickname = nicknameInput.value.trim() || "Anonymous";
+
+        if (roomInfo?.isProtected && !roomPasswordInput.value) {
+            joinError.textContent = "Enter this room's password to join.";
+            joinError.classList.remove("hidden");
+            roomPasswordInput.focus();
+            return;
+        }
 
         socket.emit("join", {
 
             nickname: nickname,
+
+            password: roomPasswordInput.value,
 
             previousSID: savedIdentity.previousSID,
 
@@ -520,6 +614,34 @@
 
     });
 
+    roomPasswordInput.addEventListener("keydown", (event) => {
+
+        if (event.key === "Enter") {
+            joinChat();
+        }
+
+    });
+
+
+    socket.on("join_error", (data) => {
+
+        joinError.textContent = data.error || "Unable to join this room.";
+        joinError.classList.remove("hidden");
+        roomPasswordInput.focus();
+
+    });
+
+
+    socket.on("room_closed", (data) => {
+
+        joinError.textContent = data.error || "This room has closed.";
+        joinError.classList.remove("hidden");
+        statusText.textContent = "Room closed";
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+
+    });
+
 
     // Receive identity from backend.
 
@@ -529,11 +651,14 @@
 
         savedIdentity.previousSID = data.sid;
         savedIdentity.recoveryToken = data.recoveryToken;
+        hasSavedHandshake = true;
+        localStorage.setItem("roomNickname", nickname);
 
         localStorage.setItem("previousSID", data.sid);
         localStorage.setItem("recoveryToken", data.recoveryToken);
 
         joined = true;
+        roomPasswordInput.value = "";
 
         usernameModal.classList.add("hidden");
 
@@ -688,6 +813,8 @@
     // Start.
 
     updateStatus(false);
+    refreshRoomDetails();
+    window.setInterval(refreshRoomDetails, 10000);
 
 </script>
 
