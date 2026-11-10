@@ -1,11 +1,4 @@
 .new-chat-modal {
-    --modal-accent: hsl(var(--primary_2));
-    --modal-accent-dark: hsl(var(--quaternary));
-    --modal-text: hsl(var(--black));
-    --modal-muted: hsl(220 8% 48%);
-    --modal-border: hsl(220 15% 90%);
-    --modal-surface: hsl(339 53% 99%);
-
     position: fixed;
     inset: 0;
     z-index: 1000;
@@ -104,7 +97,7 @@
 .new-chat-modal .modal-header p {
     margin: 6px 0 0;
 
-    color: var(--modal-muted);
+    color: var(--chat-muted);
     font-family: "Inter", sans-serif;
     font-size: 0.85rem;
     line-height: 1.5;
@@ -169,10 +162,10 @@
     width: 100%;
     height: 49px;
 
-    border: 1.5px solid var(--modal-border);
+    border: 1.5px solid var(--chat-border);
     border-radius: 12px;
 
-    background: var(--modal-surface);
+    background: var(--chat-surface);
 
     transition:
         border-color 0.2s ease,
@@ -182,7 +175,7 @@
 
 .new-chat-modal .input-wrapper:focus-within,
 .new-chat-modal .select-wrapper:focus-within {
-    border-color: var(--modal-accent);
+    border-color: var(--chat-accent);
     background: hsl(var(--white));
 
     box-shadow: 0 0 0 4px hsl(var(--primary_2) / 0.15);
@@ -223,7 +216,7 @@
     display: block;
     margin-top: 7px;
 
-    color: var(--modal-muted);
+    color: var(--chat-muted);
     font-family: "Inter", sans-serif;
     font-size: 0.73rem;
     line-height: 1.5;
@@ -257,7 +250,7 @@
     width: 17px;
     height: 17px;
 
-    color: var(--modal-muted);
+    color: var(--chat-muted);
     pointer-events: none;
 }
 
@@ -312,10 +305,10 @@
     min-height: 65px;
     padding: 9px;
 
-    border: 1.5px solid var(--modal-border);
+    border: 1.5px solid var(--chat-border);
     border-radius: 12px;
 
-    background: var(--modal-surface);
+    background: var(--chat-surface);
     color: hsl(var(--black));
 
     cursor: pointer;
@@ -518,10 +511,6 @@
     border-radius: 50%;
 
     animation: buttonSpin 0.7s linear infinite;
-}
-
-@keyframes buttonSpin {
-    to { transform: rotate(360deg); }
 }
 
 .new-chat-modal .create-button.loading .button-loader {

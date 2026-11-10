@@ -35,22 +35,54 @@ const copyTo = (from, to) => {
     }
 }
 
+const copyToClipboard = async (text) => {
+    let isCopied     = false;
+    let errorMessage = "";
+
+    try {
+        const [copied, message] = await window.pywebview.api.copy_text_to_clipboard(text);
+        isCopied                = copied;
+        errorMessage            = message;
+    } catch (error) {
+        errorMessage = error?.message || error || "An unknown error occurred. Please try again.";
+    }
+
+    return [isCopied, errorMessage];
+}
+
+window.copyToClipboard = copyToClipboard;
+
 const calculateExpireIn = (timestamp) => {
     const now        = new Date();
     const expireTime = new Date(timestamp);
     const diff       = expireTime - now;
-    const minutes    = Math.floor(diff / 60000);
     
-    if (minutes < 60) {
+    if (diff <= 0) {
+        return "Expired";
+    }
+
+    const totalSeconds = Math.floor(diff / 1000);
+    const seconds      = totalSeconds % 60;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const minutes      = totalMinutes % 60;
+    const hours        = Math.floor(totalMinutes / 60);
+
+    if (totalMinutes < 1) {
+        return `${seconds} Seconds`;
+    }
+
+    if (hours < 1) {
         return `${minutes} Minutes`;
     }
-    
-    const hours = Math.floor(minutes / 60);
-    if (hours === 1) {
-        return "Hour";
-    }
-    
+
     return `${hours} Hours`;
+}
+
+const loadDetails = async (chatId) => {
+    loadingToggle(true, "Loading chat details...");
+    await window.detailsModal.loadChat(chatId);
+    window.detailsModal.open();
+    loadingToggle(false);
 }
 
 const loadChats = (chats) => {
@@ -78,9 +110,13 @@ const loadChats = (chats) => {
                 throw new Error(`Chat ${M + 1} not found. Skip ${M + 1}/4`);
             }
 
+            const status = !chat.lifetime && calculateExpireIn(chat.expire_time) === "Expired"
+                ? "Inactive"
+                : chat.status.toLowerCase() === "active" ? "Active" : "Inactive";
+
             HTMLText += `
                 <div class="chat">
-                    <div class="more-details-line" id="CHAT-${chat.id}"></div>
+                    <div class="more-details-line" onclick="loadDetails('${chat.chat_id}')"></div>
                     <div class="short-container">
                         <span>${chat.short_name}</span>
                     </div>
@@ -89,9 +125,9 @@ const loadChats = (chats) => {
                     </div>
                     <div class="sep-line"></div>
                     <div class="row">
-                        <div class="status ${chat.status.toLowerCase() === "active" ? "active" : "inactive"}">
+                        <div class="status ${status.toLowerCase()}">
                             <div class="dot"></div>
-                            <div class="text">${chat.status}</div>
+                            <div class="text">${status}</div>
                         </div>
                         <div class="expire-in">
                             ${
@@ -121,7 +157,12 @@ const loadChats = (chats) => {
             // 50% chance to refresh. To reduce refreshing source usage.
             if (Math.floor(Math.random() * 2) == 1) return;
 
-            loadChats(getValue("chats", []));
+            if (Math.floor(Math.random() * 2) == 0) {
+                loadChats(getValue("chats", []));
+            } else {
+                askForRefreshChats();
+            }
+
         }, Math.floor(Math.random() * 5000) + 3000);
     }
 
@@ -134,6 +175,8 @@ const askForRefreshChats = async () => {
         const chats = await window.pywebview.api.load_chats();
         
         if (chats.length === 0) {
+            setValue("chats", []);
+            loadChats([]);
             return;
         }
 
@@ -150,6 +193,7 @@ const askForRefreshChats = async () => {
                 }
 
                 delete askForRefreshChats[`__retry_count_${randomKey}`]; // Clean up the reference
+                setValue("chats", chats);
                 loadChats(chats);
             }
 
@@ -157,6 +201,7 @@ const askForRefreshChats = async () => {
             return;
         }
 
+        setValue("chats", chats);
         loadChats(chats);
     } catch (error) {/* Just passing, no need to handle error */ }
 }
@@ -169,6 +214,9 @@ async function loadData() {
     try {
         const data = await window.pywebview.api.get_data();
         copyTo(data, DataConfig);
+        buildDetailsModal();
+        buildCloudflaredModal();
+        buildNewChatModal();
     } catch (error) {
         const errorModal                = document.getElementById("errorModal");
         errorModal.style.backdropFilter = "blur(50px)";
@@ -178,10 +226,6 @@ async function loadData() {
     }
 
     loadChats(getValue("chats", []));
-    loadingToggle(false);
-
-    askForRefreshChats();
-    askForRefreshChats();
 
     const pathContainer = document.getElementById("cloudflaredPath");
     if (pathContainer) {
@@ -190,6 +234,8 @@ async function loadData() {
         newText                   = newText.replace("{{cloudflaredServiceName}}", getValue("cloudflaredServiceName", "cloudflare_tunnel_no.exe"));
         pathContainer.textContent = newText;
     }
+
+    loadingToggle(false);
 
     document.getElementById("closeErrorButton").addEventListener("click" , (e) => {
         e.preventDefault();
@@ -239,4 +285,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 window.addEventListener("pywebviewready", () => {
     webviewLoaded = true;
     loadData();
+});
+
+window.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 });

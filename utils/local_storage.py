@@ -24,6 +24,7 @@ class _StorageSupplyHandle:
         """
         Check if a key exists in the storage. Allowed to use dot notation for nested keys.
         """
+        
         value = self.__get_nested(key)
         return True if value is not self._NOT_FOUND else False
 
@@ -31,6 +32,7 @@ class _StorageSupplyHandle:
         """
         Get a value from the storage. Allowed to use dot notation for nested keys.
         """
+
         value = self.__get_nested(key)
         return value if value is not self._NOT_FOUND else default
 
@@ -207,6 +209,7 @@ class LocalStorage:
                 with self.storage_path.open("w") as file:
                     file.write(encrypted_data)
 
+            self.__current_data = self.load()
         except Exception as e:
             if APP_DEBUG: print(f"[LocalStorage] Error saving data: {e}")
 

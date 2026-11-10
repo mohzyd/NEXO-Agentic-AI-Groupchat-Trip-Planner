@@ -1,6 +1,5 @@
 from pathlib import Path
-import screeninfo
-import webview
+import screeninfo, webview, threading
 
 class WebViewCreationOptions:
     """
@@ -37,6 +36,8 @@ class WebViewCreationOptions:
 
 class WebViewHandler:
     __current_window: webview.Window | None = None
+    __visible: bool = False
+    __lock: threading.Lock = threading.Lock()
 
     def __init__(
         self,
@@ -72,16 +73,14 @@ class WebViewHandler:
 
         X, Y = options.x, options.y
 
-        if (options.on_center):
-            monitors = screeninfo.get_monitors()
-            for monitor in monitors:
-                if (monitor.is_primary):
-                    X = (monitor.width  - options.width)  // 2
-                    Y = (monitor.height - options.height) // 2
-                    break
-
         options.width  += 16
         options.height += 39
+
+        if (options.on_center):
+            _, x, y = self.get_center_coordinate(options.width, options.height)
+            X, Y = x, y
+
+        WebViewHandler.__visible = (not options.hidden and not options.minimized)
 
         WebViewHandler.__current_window = webview.create_window(
             title=options.title, url=html_path.as_uri(), js_api=options.api, width=options.width, height=options.height,
@@ -91,6 +90,7 @@ class WebViewHandler:
         )
         WebViewHandler.__current_window._creation_options = options
 
+        WebViewHandler.__setup_events()
         webview.start(debug=True)
 
     @staticmethod
@@ -135,6 +135,10 @@ class WebViewHandler:
             return False
         
         cls.__current_window.hide()
+
+        with cls.__lock:
+            cls.__visible = False
+
         return True
 
     @classmethod
@@ -146,46 +150,115 @@ class WebViewHandler:
             True if the window was shown, False otherwise.
         """
 
-        if (not isinstance(cls.__current_window, webview.Window)):
+        window = cls.__current_window
+        
+        if (not isinstance(window, webview.Window)):
             return False
         
-        cls.__current_window.show()
+        window.restore()
+        window.show()
+        window.on_top = True
+        window.on_top = window._creation_options.on_top
+
+        with cls.__lock:
+            cls.__visible = True
+
         return True
 
     @classmethod
-    def set_bounds(
+    def set_position(
         cls,
-        x:      int | None = None,
-        y:      int | None = None,
-        width:  int | None = None,
-        height: int | None = None
+        x: int | None = None,
+        y: int | None = None,
     ) -> bool:
         """
-        Sets the bounds of the current window.
+        Sets the position of the current window.
         
         Args:
-            x:      The x coordinate of the window.
-            y:      The y coordinate of the window.
-            width:  The width of the window.
-            height: The height of the window.
+            x: The x coordinate of the window.
+            y: The y coordinate of the window.
             
         Returns:
-            True if the bounds were set, False otherwise.
+            True if the position was set, False otherwise.
         """
+
+        window = cls.__current_window
         
-        if (not isinstance(cls.__current_window, webview.Window)):
+        if (not isinstance(window, webview.Window)):
             return False
         
-        cls.__current_window.move(
-            x if x is not None else cls.__current_window.x,
-            y if y is not None else cls.__current_window.y
+        window.move(
+            x if x is not None else window.x,
+            y if y is not None else window.y
         )
-
-        if (width is not None or height is not None):
-            options = cls.__current_window._creation_options
-            cls.__current_window.resize(
-                width  if (width  is not None and (options.min_width  <= width  <= options.max_width))  else cls.__current_window.width,
-                height if (height is not None and (options.min_height <= height <= options.max_height)) else cls.__current_window.height
-            )
         
         return True
+
+    @classmethod
+    def is_visible(cls) -> bool:
+        """
+        Checks if the current window is visible.
+        
+        Returns:
+            True if the window is visible, False otherwise.
+        """
+        
+        with WebViewHandler.__lock:
+            return WebViewHandler.__visible
+
+    @classmethod
+    def get_center_coordinate(
+        cls,
+        width:  int | None = None,
+        height: int | None = None
+    ) -> tuple[bool, int | None, int | None]:
+        if width is None or height is None:
+            width  = cls.__current_window._creation_options.width  if width  is None else width
+            height = cls.__current_window._creation_options.height if height is None else height
+
+        if not isinstance(width, int) or not isinstance(height, int):
+            return False, None, None
+        
+        monitors = screeninfo.get_monitors()
+        for monitor in monitors:
+            if (monitor.is_primary):
+                X = (monitor.width  - width)  // 2
+                Y = (monitor.height - height) // 2
+                break
+        
+        return True, X, Y
+
+    @staticmethod
+    def __on_minimized() -> None:
+        """
+        Called when the window is minimized by webview.
+        """
+        
+        with WebViewHandler.__lock:
+            WebViewHandler.__visible = False
+    
+    @staticmethod
+    def __on_restored() -> None:
+        """
+        Called when the window is restored by webview.
+        """
+        
+        with WebViewHandler.__lock:
+            WebViewHandler.__visible = True
+
+    @staticmethod
+    def __setup_events() -> None:
+        """
+        Sets up the events for the created webview window.
+        
+        Args:
+            window: The window to set up the events for ( will be passed by webview ).
+        """
+
+        window = WebViewHandler.__current_window
+
+        if not window:
+            return
+
+        window.events.minimized += WebViewHandler.__on_minimized
+        window.events.restored  += WebViewHandler.__on_restored

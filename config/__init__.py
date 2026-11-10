@@ -27,7 +27,7 @@ APP_CRYPTO_HEADER:         bytes = b"nexo_app_c9befee16b746ccbe2318e4536fe64ea"
 APP_CRYPTO_ENCRYPTION_KEY: str   = "nexo_app_a4df4fa4c20349f3439f8edb4f37e92f"
 
 # Storage types
-APP_STORAGES = Literal["chats"]
+APP_STORAGES = Literal["chats", "chats_history"]
 
 APP_PIPE_DEBUG_ENABLED:        bool       = True
 APP_PIPE_NAME:                 str        = r"\\.\pipe\\" + APP_NAME.replace(" ", "").upper()

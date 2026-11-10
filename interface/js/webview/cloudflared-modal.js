@@ -256,8 +256,9 @@ const CloudflaredModal = (() => {
 
         manualResult.hidden = false;
 
-        if (isInstalled) setValue("hasRequirement", true);
-
+        if (!isInstalled) return;
+        
+        setValue("hasRequirement", true);
         setCloseDisabled(true);
         setTimeout(() => {
             blocked = false;
@@ -331,16 +332,7 @@ const CloudflaredModal = (() => {
         copyPathButton.wait = true;
         const path          = modal.querySelector("#cloudflaredPath").textContent.trim();
 
-        let isCopied     = false;
-        let errorMessage = "";
-
-        try {
-            const [copied, message] = await window.pywebview.api.copy_text_to_clipboard(path);
-            isCopied                = copied;
-            errorMessage            = message;
-        } catch (error) {
-            errorMessage = error?.message || error || "An unknown error occurred. Please try again.";
-        }
+        const [isCopied, errorMessage] = await copyToClipboard(path);
 
         if (isCopied) {
             copyPathButton.title       = "Copied!";
@@ -378,33 +370,31 @@ const CloudflaredModal = (() => {
         failInstallation
     };
 
-})();
+});
 
-window.CloudflaredModal = CloudflaredModal;
+function buildCloudflaredModal() {
+    window.CloudflaredModal = CloudflaredModal();
+}
 
 window.API.on("downloadCloudflaredUpdate", (data) => {
-    const { isDownloading, downloaded, total, message } = data;
-    const totalRel = total || 0;
-    console.log("downloadCloudflaredUpdate", data);
-    
-    if (!isDownloading) {
-        window.CloudflaredModal.failInstallation(message || "Failed to download Cloudflared");
-        return;
+    const { downloaded, total } = data;
+    let progress = 100;
+
+    if (total > 0) {
+        progress = Math.round((downloaded / total) * 100);
     }
 
-    let percentage;
-    if (typeof total !== "number" || total <= 0) {
-        console.error("Invalid download progress data");
-        percentage = 99;
-    } else {
-        percentage = Math.round((downloaded / totalRel) * 100);
-    }
-    
-    if (downloaded == totalRel) {
+    window.CloudflaredModal.updateProgress(progress);
+});
+
+window.API.on("downloadCloudflaredComplete", (data) => {
+    const { success, reason } = data;
+
+    if (success) {
         window.CloudflaredModal.completeInstallation();
         setValue("hasRequirement", true);
         return;
     }
 
-    window.CloudflaredModal.updateProgress(percentage);
+    window.CloudflaredModal.failInstallation(reason || "Failed to download Cloudflared");
 });

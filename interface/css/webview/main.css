@@ -12,6 +12,19 @@
     --warning:    48 100% 65%;
     --warning_2:  48 100% 49%;
     --gray:       210 15% 90%;
+
+    --cloudflared-accent: hsl(var(--primary_2));
+    --cloudflared-accent-dark: hsl(var(--quaternary));
+    --cloudflared-text: hsl(var(--black));
+    --cloudflared-muted: hsl(220 8% 48%);
+    --cloudflared-border: hsl(220 15% 90%);
+    --cloudflared-surface: hsl(339 53% 99%);
+    --chat-accent: hsl(var(--primary_2));
+    --chat-accent-dark: hsl(var(--quaternary));/**/
+    --chat-text: hsl(var(--black)); /**/
+    --chat-muted: hsl(220 8% 48%);
+    --chat-border: hsl(220 15% 90%);
+    --chat-surface: hsl(339 53% 99%);
 }
 
 * {
@@ -222,18 +235,6 @@ body {
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: flex-start;
-}
-
-.chats .area .no-chat {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-shadow: 0 0px 5px hsl(var(--quaternary) / 0.5);
-    font-size: 1.5rem;
-    font-weight: 600;
-    font-family: "Inter", sans-serif;
-    color: hsl(var(--primary_2));
 }
 
 .chats .area .chat {
@@ -461,4 +462,8 @@ body {
 .chats .area .chat .share-link .copy:hover {
     background: hsl(var(--white));
     color: hsl(var(--primary_2));
+}
+
+@keyframes buttonSpin {
+    to { transform: rotate(360deg); }
 }

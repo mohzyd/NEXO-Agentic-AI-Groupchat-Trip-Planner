@@ -150,6 +150,7 @@ class PipeData:
     lock:            threading.RLock           = threading.RLock()
     listeners:       dict[str, Callable]       = {}
     connections:     dict[str, ConnectionData] = {}
+    on_disconnect:   dict[str, Callable]       = {}
     client_job:      str                       = ""
     is_server:       bool                      = False
     running:         bool                      = False
@@ -331,6 +332,7 @@ class Pipes:
 
         if both job and to_pipe_id aren't provided, the data will be sent automatically to server-side and will be handled there.
         """
+
         if not isinstance(data, dict):
             data = {}
 
@@ -417,6 +419,21 @@ class Pipes:
 
         with PipeData.lock:
             PipeData.listeners.pop(target, None)
+
+    @staticmethod
+    def on_disconnect(job: str, fn: Callable[[], None]) -> None:
+        """
+        Registers a function to be called when a connection is lost.
+        
+        args:
+            job: str
+                The job to register the disconnect handler for.
+            fn: Callable
+                The function to call when the connection is lost.
+        """
+        
+        with PipeData.lock:
+            PipeData.on_disconnect[job] = fn
 
     @staticmethod
     def has_job(job: str) -> bool:
@@ -653,7 +670,8 @@ class Pipes:
                     if retry_count >= APP_PIPE_IDLE_MAX_RETRIES:
                         cls.__log(f"[IDLE CHECK] [{retry_count}/{APP_PIPE_IDLE_MAX_RETRIES}]: No clients connected, exiting...")
                         cls.stop(cls)
-                        os._exit(0)
+                        with PipeData.lock:
+                            PipeData.running = False
         
         threading.Thread(target=watch, daemon=True).start()
 
@@ -671,6 +689,10 @@ class Pipes:
             if PipeData.connections.get(connection.id) is connection:
                 del PipeData.connections[connection.id]
             handle, connection.handle = connection.handle, None
+            
+            disconnection_fn = PipeData.on_disconnect.pop(connection.job, None)
+            if disconnection_fn is not None:
+                disconnection_fn(connection.job)
 
         if handle is not None:
             try:

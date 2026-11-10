@@ -7,56 +7,59 @@ The life-time of the public URL is until the tunnel is closed, the process is te
 Please have a look at the Tunnel class and read the descriptions to understand how to use this system.
 Have a nice day <3
 """
-
-from typing      import List, Self, Tuple, Callable
-from dataclasses import dataclass
+from __future__  import annotations
 from .file       import get_local_app_data_path
+from typing      import Tuple, Callable, Self
+from dataclasses import dataclass
+from queue       import Queue, Empty
 from pathlib     import Path
-import subprocess, requests, threading
+import subprocess, requests, threading, atexit
 import time, re, config, platform, random
 
-class Processes:
+
+
+class TunnelsData:
     """
-    A class to manage tunnels processes and holds their ports to avoid conflicts.
+    Data class for storing tunnels information & any required information.
     """
 
-    all_processes: List[subprocess.Popen] | None = None
-    ports_in_use: set[int] | None                = None
+    lock: threading.Lock       = threading.Lock()
+    tunnels: dict[str, Tunnel] = {}
+    ports:   set[int]          = set()
 
 class ErrorCodes:
     """
     Error codes for tunnel operations. Helps to identify the problem.
     """
 
-    SERVICE_NOT_AVAILABLE: int       = 0x01
-    TUNNEL_ALREADY_CREATED: int      = 0x02
-    TUNNEL_CREATING: int             = 0x03
-    TUNNEL_TIMEOUT: int              = 0x04
-    INVALID_PORT_NUMBER: int         = 0x05
-    TUNNEL_NOT_FOUND: int            = 0x06
-    SERVICE_ALREADY_DOWNLOADING: int = 0x07
-    SERVICE_NOT_FOUND: int           = 0x08
+    SERVICE_NOT_AVAILABLE:       int = 0x01
+    TUNNEL_ALREADY_CREATED:      int = 0x02
+    TUNNEL_CREATING:             int = 0x03
+    TUNNEL_TIMEOUT:              int = 0x04
+    SERVICE_ALREADY_DOWNLOADING: int = 0x05
+    SERVICE_NOT_FOUND:           int = 0x06
 
 @dataclass
-class Response:
+class TunnelResponse:
     """
-    Response class is a formula for all responses, makes it easier to handle your operations.
+    TunnelResponse class is a formula for all responses, makes it easier to handle your operations.
     """
 
-    success: bool                 = False
+    success:    bool              = False
     error_code: ErrorCodes | None = None
-    reason: str | None            = None
-    url: str | None               = None
+    reason:     str | None        = None
+    url:        str | None        = None
 
 
 class Tunnel:
-    __closing: bool        = False
-    __is_downloading: bool = False
-    
+    _created: bool = False
+    _is_downloading: bool = False
+
     def __init__(
         self,
         *,
-        port: int    = None,
+        name:    str = None,
+        port:    int = None,
         timeout: int = 30
     ) -> None:
         """
@@ -67,8 +70,18 @@ class Tunnel:
             timeout: The timeout in seconds for the tunnel creation process. Default is 30 seconds.
         """
 
+        if (self._created):
+            raise ValueError("Tunnel is already created")
+
+        if not isinstance(name, str) or len(name.strip()) == 0:
+            raise ValueError("Name must be a non-empty string")
+
         if (not self.__check_int_validality(port)):
             raise ValueError("Port must be an integer")
+
+        with TunnelsData.lock:
+            if port in TunnelsData.ports:
+                raise ValueError("Port is already in use")
 
         if (not self.__check_int_validality(timeout)):
             raise ValueError("Timeout must be an integer")
@@ -77,42 +90,36 @@ class Tunnel:
         if (timeout < 5):
             raise ValueError("Timeout must be at least 5 seconds")
 
-        if (Processes.ports_in_use is None):
-            Processes.ports_in_use = set()
-
-        if (port in Processes.ports_in_use):
-            raise ValueError("Port is already in use")
-
+        self.name        = name.strip()
         self.port        = port
         self.timeout     = timeout
+        self._created    = True
+        self._closing    = False
         self.is_created  = False
         self.is_creating = False
-        self.is_closed   = False
+        self.process     = None
         self.url         = None
 
-        # Add port to the holding list to prevent multiple tunnels refered to the same port.
-        Processes.ports_in_use.add(port)
+        with TunnelsData.lock:
+            TunnelsData.tunnels[self.name] = self
+            TunnelsData.ports.add(self.port)
 
-    def __del__(self) -> None:
-        if (Processes.ports_in_use is not None):
-            Processes.ports_in_use.discard(self.port)
-
-    def create_tunnel(self) -> Response:
+    def create_tunnel(self, callback: Callable[[TunnelResponse], None] = None) -> TunnelResponse:
         """
-        Activate the tunnel, handle the tunnel creation process, returns a Response object with url of the tunnel if successful.
+        Activate the tunnel, handle the tunnel creation process, returns a TunnelResponse object with url of the tunnel if successful.
         
         Returns:
-            Response: A response object containing the result of the tunnel creation process.
+            TunnelResponse: A response object containing the result of the tunnel creation process.
         """
 
         if (self.is_created):
-            return Response(
+            return TunnelResponse(
                 reason="Tunnel is already created",
                 error_code=ErrorCodes.TUNNEL_ALREADY_CREATED
             )
 
         if (self.is_creating):
-            return Response(
+            return TunnelResponse(
                 reason="Tunnel in creating process.",
                 error_code=ErrorCodes.TUNNEL_CREATING
             )
@@ -121,9 +128,9 @@ class Tunnel:
         service_found, path = self.has_cloudflare_service()
 
         if (not service_found):
-            del self.is_creating
+            self.is_creating = False
  
-            return Response(
+            return TunnelResponse(
                 reason="Cloudflare tunnel service not found",
                 error_code=ErrorCodes.SERVICE_NOT_AVAILABLE
             )
@@ -136,64 +143,37 @@ class Tunnel:
             bufsize=1
         )
 
-        url        = None
-        start_time = time.time()
+        threading.Thread(target=self.__creation_of_tunnel, args=(callback,), daemon=True).start()
 
-        while (time.time() - start_time < self.timeout):
-            line = self.process.stdout.readline()
-
-            if not line:
-                continue
-
-            match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
-            if match:
-                url = match.group(0)
-                break
-
-        if (url is None):
-            self.process.terminate()
-            self.process.wait()
-            del self.process
-            del self.is_creating
-
-            return Response(
-                reason="Failed to create tunnel. Timeout reached.",
-                error_code=ErrorCodes.TUNNEL_TIMEOUT
-            )
-        
-        self.url                     = url
-        self.process.parent_instance = self
-        Processes.all_processes.append(self.process)
-        self.is_created = True
-        del self.is_creating
-        
-        return Response(
+        return TunnelResponse(
             success=True,
-            url=url
+            reason="Tunnel in creation process"
         )
 
-    def close(self) -> Self:
+    def close(self) -> None:
         """
         Close the tunnel, handle the tunnel closing process.
-        
-        Returns:
-            Self: The current instance of the tunnel, allowing for method chaining.
         """
 
-        if (self.__closing):
-            return self
+        if (self._closing or self.is_creating):
+            return
         
-        self.__closing = True
+        self._closing = True
         
         if (self.process and self.process.poll() is None):
-            self.is_closed = True
-            Processes.all_processes.remove(self.process)
             self.process.terminate()
             self.process.wait()
-            del self.process
+            self.process = None
+            self.url     = None
+
+        with TunnelsData.lock:
+            TunnelsData.tunnels.pop(self.name, None)
+            TunnelsData.ports.discard(self.port)
         
-        self.__closing = False
-        return self
+        self._created = False
+        self._closing = False
+        atexit.unregister(self.close)
+        return
 
     def is_running(self) -> bool:
         """
@@ -203,26 +183,23 @@ class Tunnel:
             bool: True if the tunnel is running, False otherwise.
         """
 
-        return not self.is_closed
+        return self.process is not None and self.process.poll() is None
+
+    def get_url(self) -> str | None:
+        """
+        Get the URL of the tunnel.
+        
+        Returns:
+            str | None: The URL of the tunnel if it's created, None otherwise.
+        """
+        
+        return self.url if isinstance(self.url, str) else None
 
     @staticmethod
-    def close_all_tunnels() -> None:
-        """
-        Closing all tunnels that are currently running.
-        """
-
-        processes_to_close = Processes.all_processes.copy()
-        Processes.all_processes.clear()
-
-        for process in processes_to_close:
-            if (process.parent_instance is not None and isinstance(process.parent_instance, Tunnel)):
-                process.parent_instance.is_closed = True
-
-            process.terminate()
-            process.wait()
-
-    @staticmethod
-    def download_service(callback: Callable[[bool, float, float | None, str | None], None] | None = None) -> Response:
+    def download_service(
+        on_progress: Callable[[float, float],     None] | None = None,
+        on_complete: Callable[[bool, str | None], None] | None = None
+    ) -> TunnelResponse:
         """
         Download the cloudflare tunnel service.
         
@@ -230,145 +207,51 @@ class Tunnel:
             callback (Callable[[bool, float, float | None, str | None] | None, optional): A callback function to be to send progress updates during the download. Will send None when the service provider doesn't provide content-length.
             
         Returns:
-            Response: A response object containing the result of the download.
+            TunnelResponse: A response object containing the result of the download.
         """
         
-        if (Tunnel.__is_downloading):
-            return Response(
+        if (Tunnel._is_downloading):
+            return TunnelResponse(
                 reason="Service is already being downloaded",
                 error_code=ErrorCodes.SERVICE_ALREADY_DOWNLOADING
             )
 
-        if (callback is not None and callable(callback)):
-            executor = lambda is_downloading, downloaded, total, message: callback(is_downloading, downloaded, total, message)
+        if (on_progress is not None and callable(on_progress)):
+            progress_callback = lambda downloaded, total: on_progress(downloaded, total)
         else:
-            executor = lambda is_downloading, downloaded, total, message: None
+            progress_callback = lambda downloaded, total: None
+
+        if (on_complete is not None and callable(on_complete)):
+            complete_callback = lambda success, error: on_complete(success, error)
+        else:
+            complete_callback = lambda success, error: None
 
         machine = platform.machine().lower()
         url     = config.CLOUDFLARE_SERVICE_URLS.get(machine)
 
         if (url is None):
-            Tunnel.__is_downloading = False
-            return Response(
+            Tunnel._is_downloading = False
+            return TunnelResponse(
                 reason=f"Unfortunately, we couldn't find a suitable service for your system machine \"{machine}\"",
                 error_code=ErrorCodes.SERVICE_NOT_FOUND
             )
 
-        destination = get_local_app_data_path() / f"{config.CLOUDFLARE_SERVICE_NAME}.exe"
+        destination = get_local_app_data_path() / config.CLOUDFLARE_SERVICE_NAME
         temp        = destination.with_name(f"{destination.name}_{random.random()}.tmp")
         destination.parent.mkdir(parents=True, exist_ok=True)
 
-        threading.Thread(target=Tunnel.__download_logic, args=(executor, url, destination, temp), daemon=True).start()
-        return Response(
+        threading.Thread(target=Tunnel.__download_logic, args=(progress_callback, complete_callback, url, destination, temp), daemon=True).start()
+        return TunnelResponse(
             success=True
         )
 
     @staticmethod
-    def __download_logic(
-        callback: Callable[[bool, float, float | None, str | None], None],
-        url:         str  | None = None,
-        destination: Path | None = None,
-        temp:        Path | None = None
-    ) -> None:
-        """
-        Downloads the service from the given URL and saves it to the destination path.
-        Caution: This function should not be called directly, use "Tunnel.download_service" method instead.
-        
-        Args:
-            callback:     A callback function to be called when the download is complete.
-            url:          The URL to download the service from.
-            destination:  The path to save the downloaded service.
-            temp:         The temporary path to save the downloaded service.
-        """
-
-        if Tunnel.__is_downloading or url is None or destination is None or temp is None:
-            return
-
-        Tunnel.__is_downloading = True
-
-        try:
-            with requests.get(url, stream=True, timeout=(10, 30)) as response:
-                response.raise_for_status()
-                total_size = int(response.headers.get("content-length", 0))
-                downloaded = 0
-
-                with temp.open("wb") as file:
-                    for chunk in response.iter_content(chunk_size=1024*16):
-                        if not chunk:
-                            continue
-
-                        file.write(chunk)
-                        downloaded += len(chunk)
-                        callback(True, downloaded, total_size, None)
-
-            if (total_size > 0) and downloaded != total_size:
-                raise OSError("Downloaded content doesn't match the expected size")
-
-            temp.replace(destination)
-            callback(True, 0, None, None)
-            Tunnel.__is_downloading = False
-
-        except (requests.RequestException, OSError):
-            temp.unlink(missing_ok=True)
-            callback(False, 0, None, "Failed to download the service")
-            Tunnel.__is_downloading = False
-
-    @staticmethod
-    def get_tunnel_on_port(port: int) -> Response:
-        """
-        Get the tunnel url that is running on the specified port.
-        
-        Args:
-            port (int): The port number to check.
-            
-        Returns:
-            Response: A response object containing the result of the check.
-        """
-
-        if not Tunnel.__check_int_validality(port):
-            return Response(
-                reason="Port number must be an integer",
-                error_code=ErrorCodes.INVALID_PORT_NUMBER
-            )
-
-        copy_all_processes = Processes.all_processes.copy()
-
-        for process in copy_all_processes:
-            if process.parent_instance is None or not isinstance(process.parent_instance, Tunnel):
-                continue
-
-            if isinstance(process.parent_instance.port, int) and process.parent_instance.port == port:
-                return Response(
-                    success=True,
-                    url=process.parent_instance.url
-                )
-        
-        return Response(
-            reason="No tunnel found on the specified port",
-            error_code=ErrorCodes.TUNNEL_NOT_FOUND
-        )
-
-
-    def __check_int_validality(self, value: int) -> bool:
-        """
-        Check if the value is a valid integer.
-        
-        Args:
-            value (int): The value to check.
-        
-        Returns:
-            bool: True if the value is a valid integer, False otherwise.
-        """
-
-        return value is not None and isinstance(value, int)
-
-    @staticmethod
-    def has_cloudflare_service() -> Tuple[bool, str | None]:
+    def has_cloudflare_service() -> Tuple[bool, str]:
         """
         Check if the cloudflare service is available.
         
         Returns:
-            Tuple[bool, str | None]: A tuple containing a boolean indicating if the service is available and the path to the service if it is available.
+            Tuple[bool, str]: A tuple containing a boolean indicating if the service is available and the path to the service if it is available.
         """
 
         storage_path = get_local_app_data_path()
@@ -386,3 +269,175 @@ class Tunnel:
                 return True, file.resolve()
 
         return False, f"Cloudflare service not found as \"{config.CLOUDFLARE_SERVICE_NAME}.exe\""
+
+    @staticmethod
+    def get_tunnel_by_name(name: str) -> Self | None:
+        """
+        Get a tunnel by its name.
+        
+        Args:
+            name: The name of the tunnel to get.
+            
+        Returns:
+            Self | None: The tunnel if it exists, None otherwise.
+        """
+
+        if not isinstance(name, str) or len(name.strip()) == 0:
+            return None
+
+        with TunnelsData.lock:
+            return TunnelsData.tunnels.get(name)
+
+    @staticmethod
+    def close_all_tunnels() -> None:
+        """
+        Close all tunnels.
+        """
+
+        with TunnelsData.lock:
+            tunnels = list(TunnelsData.tunnels.values())
+        
+        for tunnel in tunnels:
+            tunnel.close()
+
+    @staticmethod
+    def __download_logic(
+        on_progress: Callable[[float, float],     None],
+        on_complete: Callable[[bool, str | None], None],
+        url:         str  | None = None,
+        destination: Path | None = None,
+        temp:        Path | None = None
+    ) -> None:
+        """
+        A private method to download the service from the given URL and save it to the destination path.
+        Caution: This function should not be called directly, use "Tunnel.download_service" method instead.
+        
+        Args:
+            callback:     A callback function to be called when the download is complete.
+            url:          The URL to download the service from.
+            destination:  The path to save the downloaded service.
+            temp:         The temporary path to save the downloaded service.
+        """
+
+        if Tunnel._is_downloading or url is None or destination is None or temp is None:
+            return
+
+        Tunnel._is_downloading = True
+
+        try:
+            with requests.get(url, stream=True, timeout=(10, 30)) as response:
+                response.raise_for_status()
+                total_size = int(response.headers.get("content-length", 0))
+                downloaded = 0
+
+                with temp.open("wb") as file:
+                    for chunk in response.iter_content(chunk_size=1024*16):
+                        if not chunk:
+                            continue
+
+                        file.write(chunk)
+                        downloaded += len(chunk)
+                        on_progress(downloaded, total_size)
+
+            if (total_size > 0) and downloaded != total_size:
+                temp.unlink(missing_ok=True)
+                on_complete(False, "Downloaded content doesn't match the expected size")
+                return
+
+            temp.replace(destination)
+            on_complete(True, None)
+            Tunnel._is_downloading = False
+
+        except requests.RequestException:
+            temp.unlink(missing_ok=True)
+            on_complete(False, "Failed to download the service")
+            Tunnel._is_downloading = False
+
+    def __check_int_validality(self, value: int) -> bool:
+        """
+        A private method to check if the value is a valid integer.
+        
+        Args:
+            value (int): The value to check.
+        
+        Returns:
+            bool: True if the value is a valid integer, False otherwise.
+        """
+
+        return value is not None and isinstance(value, int)
+
+    def __creation_of_tunnel(self, callback: Callable[[TunnelResponse], None] | None = None) -> None:
+        """
+        A private method to create a tunnel using the cloudflared service.
+        
+        Args:
+            (Optional) callback (Callable[[TunnelResponse], None] | None): The callback function to execute when the tunnel is created.
+        """
+
+        if callback is not None and callable(callback):
+            executor = lambda res: callback(res)
+        else:
+            executor = lambda res: None
+
+        output_queue = Queue()
+        url          = None
+        start_time   = time.monotonic()
+
+        threading.Thread(target=self.__extracting_url, args=(self.process, output_queue), daemon=True).start()
+
+        while (time.monotonic() - start_time < self.timeout):
+            remaining = self.timeout - (time.monotonic() - start_time)
+
+            try:
+                line = output_queue.get(timeout=remaining)
+            except Empty:
+                break
+
+            if line is None:
+                break
+
+            match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
+            if match:
+                url = match.group(0)
+                break
+
+        if (url is None):
+            self.process.terminate()
+            self.process.wait()
+            self._created    = False
+            self.process     = None
+            self.is_creating = False
+
+            executor(TunnelResponse(
+                success=False,
+                reason="Failed to create tunnel. Timeout reached.",
+                error_code=ErrorCodes.TUNNEL_TIMEOUT
+            ))
+
+            return
+        
+        self.url         = url
+        self.is_created  = True
+        self.is_creating = False
+        atexit.register(self.close)
+        
+        executor(TunnelResponse(
+            success=True,
+            url=url
+        ))
+
+        return
+
+    def __extracting_url(self, process: subprocess.Popen, output_queue: Queue) -> None:
+        """
+        A private method to extract the URL from the process output.
+        
+        Args:
+            process (subprocess.Popen): The process to extract the URL from.
+            output_queue (Queue): The queue to put the URL in.
+        """
+        for line in iter(process.stdout.readline, ""):
+            if line:
+                output_queue.put(line)
+
+        output_queue.put(None)

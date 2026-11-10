@@ -147,6 +147,17 @@ const NewChatModal = (() => {
         modal.querySelector(".close-modal").disabled = state;
     }
 
+    function getShortName(name) {
+        name = String(name);
+        const words = name.split(" ");
+        if (words.length > 1) {
+            return (words.map(word => word[0]).join("")).toUpperCase();
+        }
+
+        const middleChar = Math.floor(name.length / 2);
+        return (name.substring(0, 1) + name.substring(middleChar, middleChar + 1)).toUpperCase();
+    }
+
     createButton.addEventListener("click", async event => {
         event.preventDefault();
 
@@ -154,13 +165,26 @@ const NewChatModal = (() => {
         setLoading(true);
         hideMessage();
 
+        const name      = chatName.value.trim();
+        const shortName = getShortName(name);
+
         const data = {
-            chat_name: chatName.value.trim(),
-            privacy:   privacy.value,
-            password:  privacy.value === "private"
+            chat_name:  name,
+            short_name: shortName,
+            privacy:    privacy.value,
+            password:   privacy.value === "private"
                         ? password.value
                         : null,
-            lifetime:  selectedDuration
+            lifetime:   selectedDuration ? false : true,
+            expire_time: selectedDuration 
+                        ? Date.now() + (selectedDuration * 60 * 1000)
+                        : null,
+            duration:   selectedDuration ? selectedDuration : 0,
+            created_at: new Date().toLocaleString("en-US", {
+                dateStyle: "medium",
+                timeStyle: "short",
+                hour12:    true
+            })
         };
 
         if (!data.chat_name) {
@@ -182,7 +206,7 @@ const NewChatModal = (() => {
         let errorMessage = "";
 
         try {
-            const [status, message] = await window.pywebview.api.create_new_chat();
+            const [status, message] = await window.pywebview.api.create_new_chat(data);
             isCreated = status; errorMessage = message;
         } catch (error) {
             errorMessage = error.message || error || "An unknown error occurred.";
@@ -214,7 +238,10 @@ const NewChatModal = (() => {
         open,
         close
     };
-})();
+});
 
 
-window.NewChatModal = NewChatModal;
+
+function buildNewChatModal() {
+    window.NewChatModal = NewChatModal();
+}
