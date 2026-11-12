@@ -9,9 +9,6 @@ venv/
 env/
 
 # Environment Variables
-.env
-.env.*
-!.env.example
 
 # IDE
 .vscode/
