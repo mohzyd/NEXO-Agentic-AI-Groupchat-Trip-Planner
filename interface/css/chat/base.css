@@ -1,0 +1,91 @@
+:root {
+  --text: #f2f8f6;
+  --muted: rgba(242, 248, 246, .62);
+  --mint: #7be08a;
+  --font-ui: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
+  --top-w: min(clamp(320px, 50vw, 640px), 100% - 24px);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  scrollbar-width: none;            /* no scrollbars anywhere */
+}
+*::-webkit-scrollbar { display: none; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: #070b18;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+
+/* Icons: centered box so they align with neighboring text */
+[data-icon] { display: inline-grid; place-items: center; }
+[data-icon] svg { display: block; }
+
+.bg {
+  position: fixed;
+  inset: 0;
+  background: #070b18 url('../../assets/ba.jpg') center / cover no-repeat;
+}
+
+.chat { position: fixed; inset: 0; }
+
+/* ---------- Liquid glass ---------- */
+.glass,
+.av {
+  position: relative;
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+.glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .17), rgba(255, 255, 255, .05));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .35),
+    inset 0 -12px 24px rgba(255, 255, 255, .03),
+    0 14px 34px rgba(0, 0, 0, .38);
+}
+
+/* Edge light: bright on the top-left and bottom-right, faint elsewhere */
+.glass::before,
+.av::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, .8),
+    rgba(255, 255, 255, .08) 32%,
+    rgba(255, 255, 255, .04) 62%,
+    rgba(255, 255, 255, .5)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+.glass.green {
+  background: linear-gradient(135deg, rgba(132, 230, 110, .42), rgba(52, 168, 90, .2));
+}
+
+.glass.gray {
+  background: linear-gradient(135deg, rgba(214, 219, 228, .25), rgba(120, 128, 142, .12));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
