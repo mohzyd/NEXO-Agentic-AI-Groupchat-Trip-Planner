@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Not available</title>
+    <link rel="stylesheet" href="../css/webview/fonts.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: hsl(38, 75%, 98%);
+        }
+
+        h1 {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 2rem;
+            color: hsl(339, 53%, 73%);
+        }
+
+        p {
+            padding: 0;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            font-size: 1rem;
+            color: hsl(116, 15%, 57%);
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: hsl(339, 53%, 73%);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.1s ease-in-out;
+        }
+        
+        button:hover {
+            background-color: hsl(339, 53%, 60%);
+        }
+    </style>
+</head>
+<body>
+    <h1>Not Supported Platform</h1>
+    <div style="display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 0; margin: 0;">
+        <p>This application is not supported on this platform.</p>
+        <p>Please use Windows.</p>
+    </div>
+    <script>
+        window.exitLogic = () => {
+            window.pywebview.api.close();
+        }
+    </script>
+    <button onclick="window.exitLogic()">Exit</button>
+</body>
+</html>

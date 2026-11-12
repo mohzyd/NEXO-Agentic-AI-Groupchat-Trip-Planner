@@ -1,0 +1,274 @@
+.details-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(20, 15, 18, 0.35);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.details-modal[open] {
+    opacity: 1;
+    visibility: visible;
+}
+
+.details-modal *[hidden] {
+    display: none;
+}
+
+.details-modal .modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    max-height: calc(100dvh - 40px);
+    padding: 28px;
+    background: hsl(var(--white));
+    border: 1px solid hsl(var(--primary_2) / 0.3);
+    border-radius: 22px;
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.16),
+        0 4px 15px rgba(0, 0, 0, 0.05);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transform: translateY(15px);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.2s ease,
+                opacity 0.15s ease,
+                visibility 0.15s ease;
+}
+
+.details-modal[open] .modal-content {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.details-modal .modal-content::-webkit-scrollbar {
+    display: none;
+}
+
+.details-modal .modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 18px;
+}
+
+.details-modal .modal-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    font-family: "Inter", sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: hsl(var(--quaternary));
+}
+
+.details-modal .modal-header h2 {
+    margin: 0;
+    color: hsl(var(--black));
+    font-family: "Poppins", sans-serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.8px;
+}
+
+.details-modal .close-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    color: hsl(var(--black) / 0.55);
+    background: hsl(var(--gray) / 0.55);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.details-modal .close-modal:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.details-modal .close-modal svg {
+    width: 18px;
+    height: 18px;
+}
+
+.details-modal .close-modal:hover {
+    color: hsl(var(--red));
+    background: hsl(var(--red) / 0.1);
+}
+
+.details-modal .options-area {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.details-modal .option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 15px;
+    border: 1px solid hsl(var(--gray) / 0.8);
+    border-radius: 11px;
+    background: hsl(var(--gray) / 0.35);
+    transition: background 0.2s ease;
+}
+
+.details-modal .option-row:hover {
+    background: hsl(var(--gray) / 0.65);
+}
+
+.details-modal .option-row .key {
+    flex-shrink: 0;
+    color: hsl(var(--black) / 0.65);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.details-modal .option-row .value {
+    min-width: 0;
+    color: hsl(var(--black));
+    font-family: "Inter", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.details-modal .actions-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    margin-top: 5px;
+}
+
+.details-modal .reload-button,
+.details-modal .delete-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-width: 0;
+    min-height: 46px;
+    padding: 11px 12px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+.details-modal .button-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.details-modal .button-icon {
+    flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+}
+
+.details-modal .button-text {
+    font-family: "Poppins", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.details-modal .reload-button {
+    color: hsl(var(--quaternary));
+    background: hsl(var(--primary) / 0.75);
+    border-color: hsl(var(--primary_2) / 0.35);
+}
+
+.details-modal .reload-button:hover:not(:disabled) {
+    color: hsl(var(--black));
+    background: hsl(var(--primary_2) / 0.3);
+    border-color: hsl(var(--primary_2));
+}
+
+.details-modal .delete-button {
+    color: hsl(var(--white));
+    background: hsl(var(--red));
+}
+
+.details-modal .delete-button:hover:not(:disabled) {
+    background: hsl(var(--red) / 0.85);
+}
+
+.details-modal .reload-button:disabled,
+.details-modal .delete-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.details-modal .reload-button:disabled {
+    color: hsl(var(--black) / 0.4);
+    background: hsl(var(--gray) / 0.7);
+    border-color: transparent;
+}
+
+.details-modal .button-loader {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: buttonSpin 0.7s linear infinite;
+}
+
+.details-modal .delete-button .button-loader {
+    color: hsl(var(--white));
+}
+
+.details-modal .reload-button .button-loader {
+    color: hsl(var(--quaternary));
+}
+
+.details-modal .error-message {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    background: hsl(var(--red) / 0.1);
+    border: 1px dashed hsl(var(--red) / 0.3);
+    margin-bottom: 10px;
+}
+
+.details-modal .error-message .message {
+    color: hsl(var(--red));
+    font-family: "Inter", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+}

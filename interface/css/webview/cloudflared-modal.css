@@ -1,0 +1,720 @@
+.cloudflared-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(20, 15, 18, 0.38);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    overflow: hidden;
+}
+
+.cloudflared-modal[open] {
+    opacity: 1;
+    visibility: visible;
+}
+
+.cloudflared-modal [hidden] {
+    display: none !important;
+}
+
+.cloudflared-modal .modal-content {
+    width: 100%;
+    max-width: 490px;
+    max-height: min(800px, calc(100dvh - 40px));
+    overflow: hidden;
+    padding: 27px;
+    background: hsl(var(--white));
+    border: 1px solid hsl(var(--primary_2) / 0.3);
+    border-radius: 22px;
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.16),
+        0 4px 15px rgba(0, 0, 0, 0.05);
+    animation: cloudSlideIn 0.25s ease;
+}
+
+@keyframes cloudSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.cloudflared-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 23px;
+}
+
+.cloudflared-modal .modal-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: hsl(var(--quaternary));
+    font-family: "Inter", sans-serif;
+    font-size: 0.66rem;
+    font-weight: 750;
+    letter-spacing: 1.8px;
+}
+
+.cloudflared-modal .modal-header h2 {
+    margin: 0;
+    color: var(--cloudflared-text);
+    font-family: "Poppins", sans-serif;
+    font-size: 1.7rem;
+    font-weight: 650;
+    letter-spacing: -0.7px;
+}
+
+.cloudflared-modal .modal-header p {
+    margin: 6px 0 0;
+    color: var(--cloudflared-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 0.83rem;
+}
+
+.cloudflared-modal .close-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: hsl(var(--gray) / 0.55);
+    color: hsl(var(--black) / 0.55);
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .close-modal svg {
+    width: 18px;
+    height: 18px;
+}
+
+.cloudflared-modal .close-modal:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.cloudflared-modal .close-modal:hover {
+    color: hsl(var(--red));
+    background: hsl(var(--red) / 0.1);
+}
+
+.cloudflared-modal .cloudflared-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 15px;
+    background: hsl(var(--warning) / 0.14);
+    border: 1px solid hsl(var(--warning) / 0.3);
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+
+.cloudflared-modal .notice-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 37px;
+    height: 37px;
+    border-radius: 11px;
+    background: hsl(var(--warning) / 0.24);
+    color: hsl(35 75% 35%);
+}
+
+.cloudflared-modal .notice-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.cloudflared-modal .notice-title {
+    display: block;
+    margin-bottom: 5px;
+    color: hsl(35 75% 35%);
+    font-family: "Inter", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 750;
+}
+
+.cloudflared-modal .notice-content p {
+    margin: 0;
+    color: hsl(35 55% 32%);
+    font-family: "Inter", sans-serif;
+    font-size: 0.77rem;
+    line-height: 1.65;
+}
+
+.cloudflared-modal .notice-content strong {
+    font-weight: 750;
+}
+
+.cloudflared-modal .installation-options {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.cloudflared-modal .installation-card {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    min-height: 77px;
+    padding: 13px;
+    border: 1.5px solid var(--cloudflared-border);
+    border-radius: 14px;
+    background: var(--cloudflared-surface);
+    text-align: left;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .installation-card:hover {
+    border-color: var(--cloudflared-accent);
+    background: hsl(var(--primary) / 0.55);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px hsl(var(--primary_2) / 0.12);
+}
+
+.cloudflared-modal .installation-card:active {
+    transform: scale(0.99);
+}
+
+.cloudflared-modal .installation-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+}
+
+.cloudflared-modal .installation-card-icon svg {
+    width: 23px;
+    height: 23px;
+}
+
+.cloudflared-modal .automatic-icon {
+    color: hsl(var(--quaternary));
+    background: hsl(var(--tertiary) / 0.25);
+}
+
+.cloudflared-modal .manual-icon {
+    color: hsl(215 50% 48%);
+    background: hsl(215 70% 65% / 0.12);
+}
+
+.cloudflared-modal .installation-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.cloudflared-modal .installation-card-title {
+    color: var(--cloudflared-text);
+    font-family: "Inter", sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.cloudflared-modal .installation-card-description {
+    color: var(--cloudflared-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 0.73rem;
+}
+
+.cloudflared-modal .installation-chevron {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-left: auto;
+    color: hsl(var(--black) / 0.35);
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .installation-card:hover .installation-chevron {
+    color: hsl(var(--quaternary));
+    transform: translateX(3px);
+}
+
+.cloudflared-modal .installation-view {
+    animation: cloudViewIn 0.22s ease;
+}
+
+@keyframes cloudViewIn {
+    from {
+        opacity: 0;
+        transform: translateY(7px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.cloudflared-modal .view-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.cloudflared-modal .back-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 0;
+    border: none;
+    background: none;
+    color: var(--cloudflared-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 0.77rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .back-button:hover {
+    color: var(--cloudflared-accent-dark);
+}
+
+.cloudflared-modal .back-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.cloudflared-modal .view-step {
+    color: hsl(var(--quaternary));
+    font-family: "Inter", sans-serif;
+    font-size: 0.62rem;
+    font-weight: 750;
+    letter-spacing: 1px;
+}
+
+.cloudflared-modal .progress-section {
+    padding: 19px;
+    border: 1px solid var(--cloudflared-border);
+    border-radius: 15px;
+    background: var(--cloudflared-surface);
+}
+
+.cloudflared-modal .progress-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 19px;
+}
+
+.cloudflared-modal .progress-title {
+    display: block;
+    color: var(--cloudflared-text);
+    font-family: "Inter", sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.cloudflared-modal .progress-subtitle {
+    display: block;
+    margin-top: 5px;
+    color: var(--cloudflared-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+
+.cloudflared-modal .progress-percentage {
+    flex-shrink: 0;
+    color: hsl(var(--quaternary));
+    font-family: "Poppins", sans-serif;
+    font-size: 1.35rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+.cloudflared-modal .progress-track {
+    width: 100%;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: hsl(var(--gray));
+}
+
+.cloudflared-modal .progress-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(
+        90deg,
+        hsl(var(--primary_2)),
+        hsl(var(--quaternary))
+    );
+    transition: width 0.3s ease;
+}
+
+.cloudflared-modal .progress-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 11px;
+    color: var(--cloudflared-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.cloudflared-modal .installation-result {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px;
+    margin-top: 14px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+}
+
+.cloudflared-modal .installation-result[hidden] {
+    display: none;
+}
+
+.cloudflared-modal .result-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 33px;
+    height: 33px;
+    border-radius: 10px;
+}
+
+.cloudflared-modal .result-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.cloudflared-modal .result-title {
+    display: block;
+    margin-bottom: 4px;
+    font-family: "Inter", sans-serif;
+    font-size: 0.79rem;
+    font-weight: 750;
+}
+
+.cloudflared-modal .result-text {
+    margin: 0;
+    font-family: "Inter", sans-serif;
+    font-size: 0.73rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.cloudflared-modal .installation-result.success {
+    color: hsl(130 50% 30%);
+    background: hsl(var(--green) / 0.08);
+    border-color: hsl(var(--green) / 0.2);
+}
+
+.cloudflared-modal .installation-result.error {
+    color: hsl(0 65% 45%);
+    background: hsl(var(--red) / 0.08);
+    border-color: hsl(var(--red) / 0.2);
+}
+
+.cloudflared-modal .automatic-view .download-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 46px;
+    border: none;
+    border-radius: 11px;
+    background: hsl(var(--quaternary));
+    color: white;
+    font-family: "Inter", sans-serif;
+    font-size: 0.84rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .automatic-view .download-button:hover {
+    background: hsl(var(--quaternary) / 0.85);
+}
+
+.cloudflared-modal .installation-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.cloudflared-modal .retry-button,
+.cloudflared-modal .done-button {
+    flex: 1;
+    min-height: 45px;
+    padding: 0 15px;
+    border: none;
+    border-radius: 11px;
+    font-family: "Inter", sans-serif;
+    font-size: 0.83rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .retry-button {
+    color: hsl(var(--black) / 0.7);
+    background: hsl(var(--gray) / 0.65);
+}
+
+.cloudflared-modal .done-button {
+    color: white;
+    background: hsl(var(--quaternary));
+}
+
+.cloudflared-modal .retry-button:hover {
+    background: hsl(var(--gray));
+}
+
+.cloudflared-modal .done-button:hover {
+    background: hsl(var(--quaternary) / 0.85);
+}
+
+.cloudflared-modal .manual-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+}
+
+.cloudflared-modal .manual-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+
+.cloudflared-modal .step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: hsl(var(--primary));
+    color: hsl(var(--quaternary));
+    font-family: "Poppins", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 750;
+}
+
+.cloudflared-modal .step-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.cloudflared-modal .step-content h3 {
+    margin: 2px 0 4px;
+    color: var(--cloudflared-text);
+    font-family: "Inter", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.cloudflared-modal .step-content p {
+    margin: 0;
+    color: var(--cloudflared-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+
+.cloudflared-modal .download-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 9px;
+}
+
+.cloudflared-modal .download-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 9px;
+    border: 1px solid hsl(var(--primary_2) / 0.35);
+    border-radius: 8px;
+    background: hsl(var(--primary) / 0.55);
+    color: hsl(var(--quaternary));
+    font-family: "Inter", sans-serif;
+    font-size: 0.68rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .download-links a:hover {
+    border-color: var(--cloudflared-accent);
+    background: hsl(var(--primary_2) / 0.2);
+}
+
+.cloudflared-modal .installation-path {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 9px 10px;
+    border: 1px solid var(--cloudflared-border);
+    border-radius: 9px;
+    background: var(--cloudflared-surface);
+}
+
+.cloudflared-modal .installation-path code {
+    flex: 1;
+    min-width: 0;
+    color: hsl(var(--quaternary));
+    font-family: Consolas, monospace;
+    font-size: 0.68rem;
+    overflow-wrap: anywhere;
+}
+
+.cloudflared-modal .copy-path-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 29px;
+    height: 29px;
+    border: none;
+    border-radius: 7px;
+    background: hsl(var(--gray) / 0.7);
+    color: var(--cloudflared-muted);
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .copy-path-button:hover {
+    background: hsl(var(--primary_2) / 0.25);
+    color: hsl(var(--quaternary));
+}
+
+.cloudflared-modal .copy-path-button svg {
+    width: 15px;
+    height: 15px;
+}
+
+.cloudflared-modal .manual-result {
+    margin-top: 12px;
+    padding: 11px 13px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-family: "Inter", sans-serif;
+    font-size: 0.74rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.cloudflared-modal .manual-result[hidden] {
+    display: none !important;
+}
+
+.cloudflared-modal .manual-result.success {
+    color: hsl(130 50% 30%);
+    background: hsl(var(--green) / 0.08);
+    border-color: hsl(var(--green) / 0.2);
+}
+
+.cloudflared-modal .manual-result.error {
+    color: hsl(0 65% 45%);
+    background: hsl(var(--red) / 0.08);
+    border-color: hsl(var(--red) / 0.2);
+}
+
+.cloudflared-modal .manual-actions {
+    margin-top: 14px;
+}
+
+.cloudflared-modal .verify-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 46px;
+    border: none;
+    border-radius: 11px;
+    background: hsl(var(--quaternary));
+    color: white;
+    font-family: "Inter", sans-serif;
+    font-size: 0.84rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cloudflared-modal .verify-button:hover {
+    background: hsl(var(--quaternary) / 0.85);
+}
+
+.cloudflared-modal .verify-button:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.cloudflared-modal .verify-loader {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid hsl(var(--white) / 0.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: cloudSpin 0.7s linear infinite;
+}
+
+.cloudflared-modal .verify-button.loading .verify-loader {
+    display: block;
+}
+
+.cloudflared-modal .modal-footer {
+    display: flex;
+    align-items: center;
+    padding-top: 19px;
+    margin-top: 23px;
+    border-top: 1px solid var(--cloudflared-border);
+}
+
+.cloudflared-modal .modal-footer span {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--cloudflared-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 0.68rem;
+}
+
+.cloudflared-modal .modal-footer svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+@keyframes cloudSpin {
+    to { transform: rotate(360deg); }
+}

@@ -1,0 +1,103 @@
+/* Header + members float above the feed */
+.stack {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: calc(max(8px, env(safe-area-inset-top)) + 4px);
+  pointer-events: none;
+}
+.stack > * { pointer-events: auto; }
+
+.top {
+  width: var(--top-w);
+  padding: 12px 18px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: drop .7s var(--ease) both;
+}
+
+@keyframes drop {
+  from { opacity: 0; transform: translateY(-16px) scale(.97); }
+}
+
+.top h1 {
+  font: 700 19px/1.1 var(--font-display);
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.connection-status {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.connection-status.connected { color: var(--mint); }
+.connection-status.error { color: #ffb3a8; }
+
+.timer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .12);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.timer.urgent { color: #ffb3a8; }
+.timer.ended { color: var(--muted); }
+
+/* ---------- Members: overlapping glass circles ---------- */
+.members {
+  width: var(--top-w);
+  height: 46px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.av {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font: 700 13px var(--font-display);
+  letter-spacing: .02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+  user-select: none;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, .55), transparent 42%),
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--c) 80%, transparent),
+      color-mix(in srgb, var(--c) 36%, transparent));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, .6),
+    inset 0 -6px 12px rgba(0, 0, 0, .18),
+    0 0 0 2px rgba(6, 10, 20, .35),
+    0 6px 14px rgba(0, 0, 0, .35);
+}
+
+.av + .av { margin-left: calc(-1 * var(--overlap, 12px)); }   /* each circle tucks under the next */
+.av.more { --c: #aab1be; }
+.av.pop { animation: pop .45s var(--ease) both; }
+
+@keyframes pop {
+  from { opacity: 0; transform: scale(.4); }
+}

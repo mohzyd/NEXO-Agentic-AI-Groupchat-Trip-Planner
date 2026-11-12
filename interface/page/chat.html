@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{ chat_config.name }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('chat_stylesheet', asset_path='base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('chat_stylesheet', asset_path='header.css') }}">
+  <link rel="stylesheet" href="{{ url_for('chat_stylesheet', asset_path='messages.css') }}">
+  <link rel="stylesheet" href="{{ url_for('chat_stylesheet', asset_path='composer.css') }}">
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <main class="chat" data-chat-config='{{ chat_config|tojson|forceescape }}'>
+    <!-- Full-page scroll area; header and footer float above it -->
+    <div class="feed" id="feed" role="log" aria-live="polite"></div>
+
+    <div class="stack" id="stack">
+      <header class="top glass">
+        <h1 id="chatName">Chat</h1>
+        <span class="connection-status" id="connectionStatus" role="status">Connecting</span>
+        <div class="timer" id="timerWrap" title="Time left">
+          <span data-icon="clock"></span>
+          <span id="timer">Never</span>
+        </div>
+      </header>
+      <section class="members" id="members" aria-label="Active members"></section>
+    </div>
+
+    <div class="dock-wrap" id="dockWrap">
+      <div class="dock">
+        <div class="popover glass" id="actions" role="menu">
+          <button role="menuitem" data-act="image"><span data-icon="image"></span>Image</button>
+          <button role="menuitem" data-act="location"><span data-icon="pin"></span>Location</button>
+          <button role="menuitem" data-act="gif"><span data-icon="gif"></span>GIF</button>
+          <button role="menuitem" data-act="poll"><span data-icon="poll"></span>Poll</button>
+          <button role="menuitem" data-act="payment">Payment</button>
+        </div>
+
+        <div class="sheet glass" id="sheet">
+          <div class="emoji-grid" id="emojiGrid"></div>
+          <div class="gif-pane" id="gifPane" hidden>
+            <input id="gifSearch" type="search" placeholder="Search GIFs" autocomplete="off">
+            <div class="gif-grid" id="gifGrid"></div>
+            <button type="button" class="gif-load-more" id="gifLoadMore" hidden>
+              Load more GIFs
+            </button>
+          </div>
+        </div>
+
+        <footer class="composer glass" id="composer">
+          <button class="icon-btn" id="moreBtn" aria-label="More actions" aria-expanded="false" data-icon="plus"></button>
+          <input id="input" type="text" maxlength="4000" placeholder="Write a message (use @ai to ask Nexo AI)" autocomplete="off" enterkeyhint="send">
+          <button class="icon-btn" id="emojiBtn" aria-label="Emoji" data-icon="smile"></button>
+          <button class="icon-btn send" id="sendBtn" aria-label="Send message" data-icon="send"></button>
+        </footer>
+      </div>
+    </div>
+  </main>
+
+  <input type="file" id="imageInput" accept="image/*" hidden>
+
+  <dialog id="joinDialog" class="glass modal">
+    <form id="joinForm">
+      <h2>Join chat</h2>
+      <label>Nickname
+        <input id="nicknameInput" name="nickname" autocomplete="nickname" maxlength="40" required>
+      </label>
+      <label id="passwordLabel" hidden>Room password
+        <input id="passwordInput" name="password" type="password"
+               autocomplete="current-password">
+      </label>
+      <p id="joinError" class="join-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <button type="submit" class="solid">Join</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pollDialog" class="glass modal">
+    <form id="pollForm" method="dialog">
+      <h2>New poll</h2>
+      <label>Question
+        <input name="q" required maxlength="120" placeholder="Where should we meet?">
+      </label>
+      <label>Options, one per line
+        <textarea name="opts" rows="4" required placeholder="Cafe&#10;Office&#10;Online"></textarea>
+      </label>
+      <label>Closes after
+        <select name="sec">
+          <option value="30">30 seconds</option>
+          <option value="60" selected>1 minute</option>
+          <option value="300">5 minutes</option>
+          <option value="3600">1 hour</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="pollCancel">Cancel</button>
+        <button type="submit" class="solid">Create poll</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="paymentDialog" class="glass modal">
+    <form id="paymentForm">
+      <h2>Simulated group payment</h2>
+      <label>Description
+        <input name="title" required maxlength="120" placeholder="Shared dinner">
+      </label>
+      <label>Target amount ({{ chat_config.currency or 'USD' }})
+        <input name="target" type="number" min="0.01" max="10000" step="0.01" required>
+      </label>
+      <button type="button" class="ghost" id="suggestBudgetBtn">Suggest budget with AI</button>
+      <p class="payment-disclaimer" id="budgetSuggestionStatus" role="status">
+        The leader can use an AI suggestion or enter the trip budget manually.
+      </p>
+      <p class="payment-disclaimer">
+        Each member who pledged checks out their own contribution using a PayPal Sandbox
+        buyer test account from your PayPal Developer Dashboard. This is a test only: do not
+        enter a real card or real PayPal credentials.
+        Sandbox payments do not charge real money or create a shared wallet.
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="paymentCancel">Cancel</button>
+        <button type="submit" class="solid">Create proposal</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="locDialog" class="glass modal">
+    <form id="locForm">
+      <h2>Share location</h2>
+      <button type="button" class="solid wide" id="locCurrent">Use my current location</button>
+      <label>Or choose a place
+        <input id="locSearch" type="search" placeholder="Search a place or address" autocomplete="off">
+      </label>
+      <div class="loc-preview" id="locPreview"></div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="locCancel">Cancel</button>
+        <button type="button" class="solid" id="locSend" disabled>Send location</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="{{ url_for('chat_script', asset_path='config.js') }}"></script>
+  <script src="{{ url_for('chat_script', asset_path='utils.js') }}"></script>
+  <script src="{{ url_for('chat_script', asset_path='members.js') }}"></script>
+  <script src="{{ url_for('chat_script', asset_path='messageTypes.js') }}"></script>
+  <script src="{{ url_for('chat_script', asset_path='location.js') }}"></script>
+  <script src="{{ url_for('chat_script', asset_path='gifs.js') }}"></script>
+  <script src="{{ url_for('chat_script', asset_path='chat.js') }}"></script>
+  <script src="{{ url_for('chat_script', asset_path='payments.js') }}"></script>
+</body>
+</html>
