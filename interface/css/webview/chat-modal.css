@@ -2,22 +2,21 @@
     position: fixed;
     inset: 0;
     z-index: 1000;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     padding: 20px;
-
     background: rgba(20, 15, 18, 0.35);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-
-    animation: modalFadeIn 0.2s ease;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
-.new-chat-modal[hidden] {
-    display: none;
+.new-chat-modal[open] {
+    opacity: 1;
+    visibility: visible;
 }
 
 @keyframes modalFadeIn {
@@ -27,40 +26,31 @@
 
 .new-chat-modal .modal-content {
     position: relative;
-
     width: 100%;
     max-width: 480px;
     max-height: calc(100dvh - 40px);
     overflow-y: auto;
-
     padding: 28px;
-
     background: hsl(var(--white));
     border: 1px solid hsl(var(--primary_2) / 0.3);
     border-radius: 22px;
-
     box-shadow:
         0 25px 80px rgba(0, 0, 0, 0.16),
         0 4px 15px rgba(0, 0, 0, 0.05);
-
-    animation: modalSlideIn 0.25s ease;
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+    transition: opacity 0.2s ease, transform 0.3s ease;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
 
-.new-chat-modal .modal-content::-webkit-scrollbar {
-    display: none;
+.new-chat-modal[open] .modal-content {
+    opacity: 1;
+    transform: translateY(0) scale(1);
 }
 
-@keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(15px) scale(0.98);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+.new-chat-modal .modal-content::-webkit-scrollbar {
+    display: none;
 }
 
 .new-chat-modal .modal-header {
@@ -68,25 +58,21 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 15px;
-
     margin-bottom: 28px;
 }
 
 .new-chat-modal .modal-eyebrow {
     display: block;
     margin-bottom: 7px;
-
     font-family: "Inter", sans-serif;
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 2px;
-
     color: hsl(var(--quaternary));
 }
 
 .new-chat-modal .modal-header h2 {
     margin: 0;
-
     color: hsl(var(--black));
     font-family: "Poppins", sans-serif;
     font-size: 1.75rem;
@@ -96,7 +82,6 @@
 
 .new-chat-modal .modal-header p {
     margin: 6px 0 0;
-
     color: var(--chat-muted);
     font-family: "Inter", sans-serif;
     font-size: 0.85rem;
@@ -108,17 +93,13 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-
     width: 36px;
     height: 36px;
-
     padding: 0;
     border: 0;
     border-radius: 10px;
-
     color: hsl(var(--black) / 0.55);
     background: hsl(var(--gray) / 0.55);
-
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -146,7 +127,6 @@
 .new-chat-modal .label-row > label {
     display: block;
     margin-bottom: 9px;
-
     color: hsl(var(--black) / 0.85);
     font-family: "Inter", sans-serif;
     font-size: 0.88rem;
@@ -158,15 +138,11 @@
     position: relative;
     display: flex;
     align-items: center;
-
     width: 100%;
     height: 49px;
-
     border: 1.5px solid var(--chat-border);
     border-radius: 12px;
-
     background: var(--chat-surface);
-
     transition:
         border-color 0.2s ease,
         box-shadow 0.2s ease,
@@ -177,7 +153,6 @@
 .new-chat-modal .select-wrapper:focus-within {
     border-color: var(--chat-accent);
     background: hsl(var(--white));
-
     box-shadow: 0 0 0 4px hsl(var(--primary_2) / 0.15);
 }
 
@@ -185,22 +160,17 @@
     width: 19px;
     height: 19px;
     flex-shrink: 0;
-
     margin-left: 14px;
-
     color: hsl(var(--quaternary));
 }
 
 .new-chat-modal .input-wrapper input {
     width: 100%;
     height: 100%;
-
     padding: 0 14px 0 11px;
-
     border: 0;
     outline: none;
     background: transparent;
-
     color: hsl(var(--black));
     font-family: "Inter", sans-serif;
     font-size: 0.9rem;
@@ -215,7 +185,6 @@
 .new-chat-modal .input-hint {
     display: block;
     margin-top: 7px;
-
     color: var(--chat-muted);
     font-family: "Inter", sans-serif;
     font-size: 0.73rem;
@@ -225,31 +194,24 @@
 .new-chat-modal .select-wrapper select {
     appearance: none;
     -webkit-appearance: none;
-
     width: 100%;
     height: 100%;
-
     padding: 0 42px 0 14px;
-
     border: 0;
     outline: none;
     background: transparent;
-
     color: hsl(var(--black));
     font-family: "Inter", sans-serif;
     font-size: 0.86rem;
     font-weight: 500;
-
     cursor: pointer;
 }
 
 .new-chat-modal .select-arrow {
     position: absolute;
     right: 14px;
-
     width: 17px;
     height: 17px;
-
     color: var(--chat-muted);
     pointer-events: none;
 }
@@ -281,7 +243,6 @@
 
 .new-chat-modal .optional-tag {
     margin-bottom: 9px;
-
     color: hsl(var(--quaternary));
     font-family: "Inter", sans-serif;
     font-size: 0.62rem;
@@ -301,16 +262,12 @@
     align-items: center;
     justify-content: center;
     gap: 3px;
-
     min-height: 65px;
     padding: 9px;
-
     border: 1.5px solid var(--chat-border);
     border-radius: 12px;
-
     background: var(--chat-surface);
     color: hsl(var(--black));
-
     cursor: pointer;
     transition: 0.2s ease;
 }
@@ -447,7 +404,6 @@
     display: flex;
     align-items: center;
     gap: 10px;
-
     margin-top: 27px;
 }
 
@@ -456,17 +412,13 @@
     align-items: center;
     justify-content: center;
     gap: 9px;
-
     min-height: 47px;
     padding: 0 18px;
-
     border: 0;
     border-radius: 11px;
-
     font-family: "Inter", sans-serif;
     font-size: 0.87rem;
     font-weight: 650;
-
     cursor: pointer;
     transition: 0.2s ease;
 }
@@ -477,10 +429,8 @@
 
 .new-chat-modal .create-button {
     flex: 1.5;
-
     color: hsl(var(--white));
     background: hsl(var(--quaternary));
-
     box-shadow: 0 4px 12px hsl(var(--quaternary) / 0.2);
 }
 
@@ -502,14 +452,11 @@
 
 .new-chat-modal .button-loader {
     display: none;
-
     width: 17px;
     height: 17px;
-
     border: 2px solid hsl(var(--white) / 0.35);
     border-top-color: hsl(var(--white));
     border-radius: 50%;
-
     animation: buttonSpin 0.7s linear infinite;
 }
 

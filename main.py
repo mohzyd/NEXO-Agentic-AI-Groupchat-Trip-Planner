@@ -11,21 +11,18 @@ from api.webview import API
 from helper      import create_server_listeners, create_webview_listeners, common_listeners
 from config      import APP_NAME, APP_DEBUG
 from server      import run_chat_host
-import argparse,   subprocess
-import random, os, time
-import threading
+import argparse, subprocess
+import random,   threading
+import os,       time
 
-def create_child(child_job: str = "") -> None:
-    if not isinstance(child_job, str) or len(child_job.strip()) == 0:
-        return
-
+def create_webview() -> None:
     runnable_args = get_runnable_path()
     command = []
 
     command.extend(runnable_args)
     command.extend([
         "--type", "client",
-        "--job", child_job
+        "--job", "webview"
     ])
 
     subprocess.Popen(
@@ -69,14 +66,14 @@ def main() -> None:
 
                 data.set("created_chats", created_chats)
 
-            create_child("webview")
+            create_webview()
             server.keep_server_alive_until()
             server.send({}, listener="kill_your_self") # Asking all active process to close themselves
             Tunnel.close_all_tunnels()
             server.stop()
 
         except ServerPipeAlreadyExistsError:
-            create_child("webview")
+            create_webview()
 
     elif args.type == "client":
 

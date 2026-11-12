@@ -1,4 +1,5 @@
 from pathlib import Path
+from config  import APP_DEBUG
 import screeninfo, webview, threading
 
 class WebViewCreationOptions:
@@ -91,7 +92,7 @@ class WebViewHandler:
         WebViewHandler.__current_window._creation_options = options
 
         WebViewHandler.__setup_events()
-        webview.start(debug=True)
+        webview.start(debug=APP_DEBUG)
 
     @staticmethod
     def get_current_window() -> webview.Window | None:

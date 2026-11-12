@@ -6,26 +6,29 @@ const detailsModal = (() => {
     const $relButton  = $modal.querySelector('.reload-button');
     const $area       = $modal.querySelector('.options-area');
 
-    let isOpen     = false;
     let isDisabled = false;
     let isLoading  = false;
     let currentChatId = null;
     let chatData      = null;
 
     function open() {
-        if (isOpen) return;
-        isOpen = true;
-        setLoading("delete", false);
-        setLoading("reload", false);
+        if ($modal.hasAttribute("open")) {
+            return;
+        }
+
         $modal.setAttribute("open", "");
     }
 
     function close() {
-        if (!isOpen || isLoading || isDisabled) return;
-        isOpen = false;
+        if (!$modal.hasAttribute("open") || isLoading || isDisabled) {
+            return;
+        }
+
         $modal.removeAttribute("open");
         setTimeout(() => {
             hideMessage();
+            setLoading("delete", false);
+            setLoading("reload", false);
             $delButton.hidden = false;
         }, 200);
     }
@@ -93,11 +96,11 @@ const detailsModal = (() => {
             return;
         }
 
-        const timeRem = calculateExpireIn(chat.expire_time || 0);
-        if (!timeRem.includes("Expired")) {
-            $relButton.setAttribute("disabled", "");
+        if (chat.status.toLowerCase() === "active") {
+            $relButton.disabled = true;
         }
 
+        const timeRem   = calculateExpireIn(chat.expire_time || 0);
         currentChatId   = chatId;
         chatData        = chat;
         $area.innerHTML = `
@@ -108,6 +111,21 @@ const detailsModal = (() => {
             <div class="option-row">
                 <div class="key">Status</div>
                 <div class="value">${chat.status}</div>
+            </div>
+            <div class="option-row">
+                <div class="key">Privacy</div>
+                <div class="value">${chat.privacy}</div>
+            </div>
+            ${
+                chat.privacy === "private" ? `
+                    <div class="option-row">
+                        <div class="key">Password</div>
+                        <div class="value">${chat.password}</div>
+                    </div>` : ""
+            }
+            <div class="option-row">
+                <div class="key">Duration</div>
+                <div class="value">${chat.duration === 0 ? "Permanent" : `${chat.duration} minutes`}</div>
             </div>
             <div class="option-row">
                 <div class="key">Remaining Time</div>
@@ -215,13 +233,10 @@ const detailsModal = (() => {
     return {
         open,
         close,
-        loadChat,
-        setLoading,
-        setMessage
+        loadChat
     }
 })
 
 function buildDetailsModal() {
-    const buildDetails  = detailsModal();
-    window.detailsModal = buildDetails;
+    window.detailsModal = detailsModal();
 }
