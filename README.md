@@ -48,10 +48,6 @@ Get the PayPal Client ID and Secret from the **Sandbox** app credentials in the 
 
 AI features require a working Groq key and available model access. The chat can still be used without AI, but AI replies and budget suggestions will not work.
 
-### Optional: GIF search
-
-GIF search reads its Giphy key from `interface/js/chat/config.js`. A browser-visible key can be seen by users, so restrict it in Giphy's dashboard if possible. GIF search is optional.
-
 ## Run
 
 From the project directory, start the desktop app:
