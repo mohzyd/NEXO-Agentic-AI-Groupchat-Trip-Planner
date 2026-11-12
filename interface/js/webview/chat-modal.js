@@ -62,20 +62,27 @@ const NewChatModal = (() => {
     };
 
     function open() {
-        modal.hidden = false;
+        if (modal.hasAttribute("open")) {
+            return;
+        }
 
+        modal.setAttribute("open", '');
         setTimeout(() => {
             chatName.focus();
         }, 100);
     }
 
     function close() {
-        if (isLoading) return;
+        if (isLoading || !modal.hasAttribute("open")) {
+            return;
+        }
 
-        modal.hidden   = true;
-        chatName.value = "";
-        privacy.value  = "public";
-        password.value = "";
+        modal.removeAttribute("open");
+        chatName.value       = "";
+        privacy.value        = "public";
+        passwordGroup.hidden = true;
+        password.value       = "";
+        password.required    = false;
         hideMessage();
     }
 
@@ -173,7 +180,7 @@ const NewChatModal = (() => {
             short_name: shortName,
             privacy:    privacy.value,
             password:   privacy.value === "private"
-                        ? password.value
+                        ? password.value.trim()
                         : null,
             lifetime:   selectedDuration ? false : true,
             expire_time: selectedDuration 
@@ -229,7 +236,7 @@ const NewChatModal = (() => {
     modal.querySelector(".close-modal").addEventListener("click", close);
     modal.addEventListener("click", event => event.target === modal ? close() : null);
     document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && !modal.hidden) {
+        if (event.key === "Escape" && modal.hasAttribute("open")) {
             close();
         }
     });

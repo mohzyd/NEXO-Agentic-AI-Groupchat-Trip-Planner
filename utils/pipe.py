@@ -236,6 +236,7 @@ class Pipes:
         Args:
             job_name (str): The name of the job to connect to.
         """
+
         if self.__created: return
         self.__created = True
 
@@ -605,6 +606,7 @@ class Pipes:
         Routes a message to the specified job or all jobs.
         Warning: this method should not be called outside the send method.
         """
+
         if not isinstance(payload, bytes) or not payload:
             return
 
@@ -809,6 +811,7 @@ class Pipes:
         Returns:
             bytes: The payload as bytes to travling in pipes.
         """
+
         try:
             return Pipes.__to_bytes(json.dumps(data))
         except Exception:
@@ -822,6 +825,7 @@ class Pipes:
         Returns:
             dict: The payload as dictionary (recived data from pipes).
         """
+
         try:
             return json.loads(Pipes.__to_str(data))
         except Exception:
@@ -833,6 +837,7 @@ class Pipes:
         A method prints a debugging messages when APP_PIPE_DEBUG_ENABLED is True.
         Better to be disabled in production mode.
         """
+
         if not APP_PIPE_DEBUG_ENABLED:
             return
 

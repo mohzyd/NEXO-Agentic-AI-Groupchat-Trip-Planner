@@ -13,8 +13,10 @@ from typing      import Tuple, Callable, Self
 from dataclasses import dataclass
 from queue       import Queue, Empty
 from pathlib     import Path
-import subprocess, requests, threading, atexit
-import time, re, config, platform, random
+import subprocess, requests
+import threading,  atexit
+import time, re,   config
+import platform,   random
 
 
 
@@ -236,7 +238,7 @@ class Tunnel:
                 error_code=ErrorCodes.SERVICE_NOT_FOUND
             )
 
-        destination = get_local_app_data_path() / config.CLOUDFLARE_SERVICE_NAME
+        destination = get_local_app_data_path() / f"{config.CLOUDFLARE_SERVICE_NAME}.exe"
         temp        = destination.with_name(f"{destination.name}_{random.random()}.tmp")
         destination.parent.mkdir(parents=True, exist_ok=True)
 
@@ -436,6 +438,7 @@ class Tunnel:
             process (subprocess.Popen): The process to extract the URL from.
             output_queue (Queue): The queue to put the URL in.
         """
+
         for line in iter(process.stdout.readline, ""):
             if line:
                 output_queue.put(line)

@@ -50,7 +50,25 @@ const copyToClipboard = async (text) => {
     return [isCopied, errorMessage];
 }
 
-window.copyToClipboard = copyToClipboard;
+window.copyURL = async (button, url) => {
+    if (button._timeout) {
+        return;
+    }
+
+    button._timeout   = true;
+    [copied, message] = await copyToClipboard(url);
+    
+    if (copied) {
+        button.textContent = "Copied!";
+        setTimeout(() => {
+            button.textContent = "Copy";
+            button._timeout = false;
+        }, 2000);
+    } else {
+        errorMessage(`Failed to copy URL: ${message}`);
+        button._timeout = false;
+    }
+};
 
 const calculateExpireIn = (timestamp) => {
     const now        = new Date();
@@ -139,7 +157,7 @@ const loadChats = (chats) => {
                     </div>
                     <div class="share-link">
                         <span class="link">${chat.url}</span>
-                        <button class="copy" onclick="copyToClipboard('${chat.url}')">Copy</button>
+                        <button class="copy" onclick="copyURL(this, '${chat.url}')">Copy</button>
                     </div>
                 </div>
             `;
@@ -247,7 +265,8 @@ async function loadData() {
         if (e.__should_wait) return;
         e.__should_wait = true;
         
-        const hasRequirement = getValue("hasRequirement", false);
+        const response       = await window.pywebview.api.is_cloudservice_installed();
+        const hasRequirement = response?.status === true;
 
         if (!hasRequirement) {
             window.CloudflaredModal.open();

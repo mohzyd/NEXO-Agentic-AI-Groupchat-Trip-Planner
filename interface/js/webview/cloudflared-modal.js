@@ -51,19 +51,23 @@ const CloudflaredModal = (() => {
     };
 
     function open() {
-        modal.hidden = false;
+        if (modal.hasAttribute("open")) {
+            return;
+        }
+
         modal.setAttribute("open", "");
         showOptions();
     }
 
     function close() {
-        if (isInstalling || modal.wait) return;
-        modal.wait = true;
+        if (isInstalling || modal.wait || !modal.hasAttribute("open")) {
+            return;
+        }
 
+        modal.wait = true;
         modal.removeAttribute("open");
         setTimeout(() => {
-            modal.hidden = true;
-            modal.wait   = false;
+            modal.wait = false;
         }, 200);
     }
 
@@ -91,8 +95,7 @@ const CloudflaredModal = (() => {
         options.hidden       = true;
         automaticView.hidden = true;
         manualView.hidden    = false;
-
-        manualResult.hidden      = true;
+        manualResult.hidden  = true;
         manualResult.className   = "manual-result";
         manualResult.textContent = "";
         setVerifying(false);
@@ -258,7 +261,6 @@ const CloudflaredModal = (() => {
 
         if (!isInstalled) return;
         
-        setValue("hasRequirement", true);
         setCloseDisabled(true);
         setTimeout(() => {
             blocked = false;
@@ -392,7 +394,6 @@ window.API.on("downloadCloudflaredComplete", (data) => {
 
     if (success) {
         window.CloudflaredModal.completeInstallation();
-        setValue("hasRequirement", true);
         return;
     }
 

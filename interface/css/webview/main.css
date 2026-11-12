@@ -154,6 +154,51 @@ body {
     color: hsl(var(--primary_2));
 }
 
+.feat-container {
+    position: absolute;
+    top: 165px;
+    width: 90%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.feat-container .box {
+    position: relative;
+    width: 170px;
+    height: 50px;
+    border-radius: 20px;
+    padding-top: 3px;
+    --glass_effect_color: var(--tertiary);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    overflow: hidden;
+    text-align: center;
+}
+
+.feat-container .box .eyebrow {
+    width: 100%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+    color: hsl(var(--primary_2) / 0.70);
+}
+
+.feat-container .box .title {
+    width: 100%;
+    font-size: 0.90rem;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+    color: hsl(var(--quaternary));
+}
+
+.feat-container .box .title.sm {
+    font-size: 0.82rem;
+}
+
 .chats {
     position: relative;
     margin-top: 70px;

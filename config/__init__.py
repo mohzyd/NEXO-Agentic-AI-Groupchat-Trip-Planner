@@ -1,3 +1,7 @@
+"""
+Configuration file for the App Project. Contains all required data that the application needs.
+"""
+
 from typing import Literal
 import win32pipe
 
@@ -17,6 +21,7 @@ CLOUDFLARE_SERVICE_URLS = {
 }
 
 # Crypto Configuration (In a final productive mode, these values shouldn't be existed in application source code. For now, it's okay to have them here)
+#Put in your mind, "NEVER TRUST CLIENT SIDE INFORMATION"
 APP_CRYPTO_SALT_SIZE:      int   = 16
 APP_CRYPTO_NONCE_SIZE:     int   = 12
 APP_CRYPTO_KEY_SIZE:       int   = 32
@@ -42,8 +47,8 @@ APP_PIPE_OUT_BUFFER_SIZE:      int        = APP_PIPE_BUFFER_SIZE
 APP_PIPE_ERROR_SEM_TIMEOUT:    int        = 121
 APP_PIPE_ERROR_PIPE_CONNECTED: int        = 535
 APP_PIPE_ERROR_MORE_DATA:      int        = 234
-APP_PIPE_IDLE_CHECK_INTERVAL:  int        = 1 #5, should return to 5 in production
-APP_PIPE_IDLE_MAX_RETRIES:     int        = 1 #5, should return to 5 in production
+APP_PIPE_IDLE_CHECK_INTERVAL:  int        = 5
+APP_PIPE_IDLE_MAX_RETRIES:     int        = 5
 APP_PIPE_POLL_INTERVAL:        float      = 0.01
 APP_PIPE_SERVER_JOB:           str        = "SERVER"
 APP_PIPE_ALL_JOBS:             str        = "*"

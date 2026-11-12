@@ -1,7 +1,7 @@
 from typing  import Any
 from utils   import Tunnel, WebViewHandler, Pipes, LocalStorage
 from webview import Window
-from config  import APP_DATA_FOLDER_NAME, CLOUDFLARE_SERVICE_NAME
+from config  import APP_DATA_FOLDER_NAME, APP_DEBUG, CLOUDFLARE_SERVICE_NAME
 import json, pyperclip, threading
 
 class API:
@@ -14,7 +14,6 @@ class API:
         """
 
         return {
-            "hasRequirement":         self.is_cloudservice_installed().get("status", False),
             "appDataFileName":        APP_DATA_FOLDER_NAME,
             "cloudflaredServiceName": f"{CLOUDFLARE_SERVICE_NAME}.exe",
             "chats":                  self.load_chats()
@@ -48,7 +47,7 @@ class API:
                 "downloaded": downloaded,
                 "total":      total
             }),
-            lambda success, reason: self.send_to_frontend("downloadCloudflaredUpdateComplete", {
+            lambda success, reason: self.send_to_frontend("downloadCloudflaredComplete", {
                 "success": success,
                 "reason":  reason
             })
@@ -78,7 +77,8 @@ class API:
                 pyperclip.PyperclipWindowsException,
                 pyperclip.PyperclipTimeoutException
             ) as e:
-            return False, "An error occurred: " + str(e)
+            if APP_DEBUG: print("[WEBVIEW] [ERROR] \"copy_text_to_clipboard\": An error occurred -> " + str(e))
+            return False, "Failed to copy text to clipboard."
 
     def load_chats(self) -> list[dict[str, Any]]:
         """
@@ -98,20 +98,21 @@ class API:
             tuple[bool, dict[str, Any]]: A tuple containing a boolean indicating success and a dictionary with the result data.
         """
 
-        if hasattr(self, "_data_wating"):
+        if hasattr(self, "_data_waiting"):
             return False, "Already creating a chat."
 
-        self._data_wating = True
+        setattr(self, "_data_waiting", True)
 
         chat_name = str(data.get("chat_name", "")).strip()
         if len(chat_name) == 0 or chat_name.isspace():
-            delattr(self, "_data_wating")
+            delattr(self, "_data_waiting")
             return False, "Chat name is required."
 
         if not (6 <= len(chat_name) <= 24):
+            delattr(self, "_data_waiting")
             return False, "Chat name must be between 6 and 24 characters."
 
-        is_valid_password = (any(
+        is_valid_password = (any(    # We check if any letter in the password is out of the ascii range (a-zA-Z0-9) any letter that is not in this range, will be rejected.
             (65 <= ord(c) <= 90)     # Uppercase letters
             or (97 <= ord(c) <= 122) # Lowercase letters
             or (48 <= ord(c) <= 57)  # Digits
@@ -119,7 +120,7 @@ class API:
         ) and len(data.get("password", "")) >= 6) if data.get("privacy", "public") == "private" else True
 
         if not is_valid_password:
-            delattr(self, "_data_wating")
+            delattr(self, "_data_waiting")
             return False, "Password must contain a letter or number and be at least 6 characters long."
 
         event    = threading.Event()
@@ -137,7 +138,7 @@ class API:
         success = response.get("success", False) if responded else False
         message = response.get("message", "") if responded else "An error occurred while creating the chat."
 
-        delattr(self, "_data_wating")
+        delattr(self, "_data_waiting")
         return success, message
 
     def delete_chat(self, chat_id: str) -> tuple[bool, str]:
@@ -154,7 +155,7 @@ class API:
         if hasattr(self, "_remove_waiting"):
             return False, "Already removing a chat."
         
-        self._remove_waiting = True
+        setattr(self, "_remove_waiting", True)
 
         if not isinstance(chat_id, str) or len(chat_id) == 0:
             delattr(self, "_remove_waiting")
@@ -186,13 +187,13 @@ class API:
             chat_id (str): The ID of the chat to reload.
         """
 
-        if hasattr(self, "_reload_wating"):
+        if hasattr(self, "_reload_waiting"):
             return False, "Already reloading a chat."
             
-        self._reload_wating = True
+        setattr(self, "_reload_waiting", True)
 
         if not isinstance(chat_id, str) or len(chat_id) == 0:
-            delattr(self, "_reload_wating")
+            delattr(self, "_reload_waiting")
             return False, "Invalid chat ID."
 
         event    = threading.Event()
@@ -210,7 +211,7 @@ class API:
         success = response.get("success", False) if responded else False
         message = response.get("message", "") if responded else "An error occurred while creating the chat."
 
-        delattr(self, "_reload_wating")
+        delattr(self, "_reload_waiting")
         return success, message
 
 
@@ -238,7 +239,7 @@ class API:
                     chat  = chat_data
                     break
 
-        return chat, found, "Chat not found" if not found else ""
+        return chat, found, "Couldn't find the required chat." if not found else ""
 
     def can_create_chat(self) -> bool:
         """
