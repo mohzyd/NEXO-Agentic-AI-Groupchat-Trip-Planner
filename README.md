@@ -73,7 +73,7 @@ No real funds are transferred. A proposal is complete only after all member cont
 - **PayPal Developer Platform — Sandbox REST API:** The backend authenticates with the Sandbox OAuth 2.0 API and uses Orders API v2 to create and capture test checkouts.
 - **Groq API — Chat Completions:** The `openai/gpt-oss-20b` model provides chat assistance and structured trip-budget suggestions.
 
-## Troubleshooting
+## Troubleshooting (How to solve problems)
 
 - **AI is not configured:** Check that `.env` is in the project directory and contains a valid `GROQ_API_KEY`.
 - **PayPal Sandbox is not configured:** Check the Sandbox business app Client ID and Secret in `.env`; do not use live credentials.
